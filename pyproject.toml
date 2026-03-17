@@ -1,0 +1,68 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "skillscan-lint"
+version = "0.1.0"
+description = "Quality linter for AI agent skill files — readability, clarity, and graph integrity checks"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+authors = [{ name = "SkillScan Contributors" }]
+keywords = ["ai", "agents", "skills", "mcp", "linting", "quality", "readability"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = [
+    "pyyaml>=6.0",
+    "click>=8.1",
+    "networkx>=3.3",
+    "textstat>=0.7",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.4",
+    "mypy>=1.10",
+]
+
+[project.scripts]
+skillscan-lint = "skillscan_lint.cli:main"
+
+[project.urls]
+Homepage = "https://skillscan.sh"
+Repository = "https://github.com/kurtpayne/skillscan-lint"
+Issues = "https://github.com/kurtpayne/skillscan-lint/issues"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+ignore = ["E501", "UP042", "UP028"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = false
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.coverage.run]
+source = ["src/skillscan_lint"]
+omit = ["tests/*"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/skillscan_lint"]
