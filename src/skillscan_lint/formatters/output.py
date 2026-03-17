@@ -1,8 +1,10 @@
 """Output formatters for skillscan-lint."""
 
 from __future__ import annotations
+
 import json
 from typing import cast
+
 from skillscan_lint.models import ScanSummary, Severity
 
 try:
