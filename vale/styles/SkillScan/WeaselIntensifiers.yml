@@ -1,0 +1,24 @@
+# SkillScan/WeaselIntensifiers.yml
+# Mirrors skillscan-lint rule QL-004
+# Vague intensifiers weaken precision in skill descriptions.
+extends: existence
+message: "Weasel intensifier '%s' weakens precision. Remove it or replace with a specific, measurable claim."
+link: https://github.com/kurtpayne/skillscan-lint#ql-004
+level: warning
+ignorecase: true
+tokens:
+  - very
+  - extremely
+  - incredibly
+  - quite
+  - rather
+  - fairly
+  - somewhat
+  - pretty
+  - really
+  - basically
+  - essentially
+  - actually
+  - literally
+  - totally
+  - absolutely

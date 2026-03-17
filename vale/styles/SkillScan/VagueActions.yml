@@ -1,0 +1,24 @@
+# SkillScan/VagueActions.yml
+# Mirrors skillscan-lint rule QL-008
+# Vague action verbs lack specificity for LLM agents.
+extends: existence
+message: "Vague action verb '%s' lacks specificity. Replace with a precise verb: fetch, parse, validate, transform, store, etc."
+link: https://github.com/kurtpayne/skillscan-lint#ql-008
+level: warning
+ignorecase: true
+tokens:
+  - handles?
+  - handling
+  - processes?
+  - processed
+  - processing
+  - manages?
+  - managed
+  - managing
+  - deal with
+  - deals with
+  - dealt with
+  - take care of
+  - work with
+  - works with
+  - worked with

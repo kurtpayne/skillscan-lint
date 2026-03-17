@@ -1,0 +1,20 @@
+# SkillScan/WeaselFillers.yml
+# Mirrors skillscan-lint rule QL-006
+# Filler phrases add noise without adding meaning.
+extends: existence
+message: "Filler phrase '%s' adds noise. State the intent directly."
+link: https://github.com/kurtpayne/skillscan-lint#ql-006
+level: warning
+ignorecase: true
+tokens:
+  - in order to
+  - due to the fact that
+  - at this point in time
+  - for the purpose of
+  - in the event that
+  - it is important to note
+  - it should be noted
+  - please note
+  - kindly
+  - feel free to
+  - don't hesitate

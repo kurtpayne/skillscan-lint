@@ -1,0 +1,23 @@
+# SkillScan/DoubleNegatives.yml
+# Mirrors skillscan-lint rule QL-022
+# Double negatives are harder to parse than positive statements.
+extends: existence
+message: "Double negative '%s' is harder to parse. Rewrite as a positive statement (e.g. 'not uncommon' → 'common')."
+link: https://github.com/kurtpayne/skillscan-lint#ql-022
+level: warning
+ignorecase: true
+tokens:
+  - not uncommon
+  - not unusual
+  - not unlikely
+  - not impossible
+  - not unheard
+  - not without
+  - not unable
+  - not unaware
+  - not unclear
+  - not unimportant
+  - not unnecessary
+  - not unrelated
+  - not unsurprising
+  - never not
