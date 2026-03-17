@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from skillscan_lint.models import Category, LintFinding, Severity
+
+if TYPE_CHECKING:
+    from skillscan_lint.config import ThresholdsConfig
 
 
 class Rule(ABC):
@@ -18,10 +21,20 @@ class Rule(ABC):
     description: str
     suggestion_template: str | None = None
 
+    # Injected at instantiation time from .skillscan-lint.toml [thresholds].
+    # Rules that use numeric thresholds should read them via _threshold() helper.
+    thresholds: ThresholdsConfig | None = None
+
     @abstractmethod
     def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list[LintFinding]:
         """Run the rule against a parsed skill file. Return a list of findings."""
         ...
+
+    def _threshold(self, name: str, default: int) -> int:
+        """Return a threshold value from config if available, else the class default."""
+        if self.thresholds is not None:
+            return int(getattr(self.thresholds, name, default))
+        return default
 
     def _finding(
         self,
@@ -53,9 +66,18 @@ def register(cls: type[Rule]) -> type[Rule]:
     return cls
 
 
-def get_all_rules() -> list[Rule]:
-    """Return instantiated instances of all registered rules."""
-    return [cls() for cls in _REGISTRY.values()]
+def get_all_rules(thresholds: ThresholdsConfig | None = None) -> list[Rule]:
+    """Return instantiated instances of all registered rules.
+
+    If *thresholds* is provided, it is injected into each rule instance so
+    that threshold-sensitive rules (word count, sentence length) use the
+    values from .skillscan-lint.toml instead of their class-level defaults.
+    """
+    rules = [cls() for cls in _REGISTRY.values()]
+    if thresholds is not None:
+        for rule in rules:
+            rule.thresholds = thresholds
+    return rules
 
 
 def get_rule(rule_id: str) -> Rule | None:

@@ -85,7 +85,12 @@ def scan_cmd(
 
     if path.is_file():
         from skillscan_lint.linter import lint_file
-        result = lint_file(path, skip_ids=skip_set, severity_overrides=cfg.rules.overrides)
+        result = lint_file(
+            path,
+            skip_ids=skip_set,
+            severity_overrides=cfg.rules.overrides,
+            thresholds=cfg.thresholds,
+        )
         summary = ScanSummary(
             results=[result],
             total_files=1,
@@ -98,6 +103,7 @@ def scan_cmd(
             skip_ids=skip_set,
             include_graph=include_graph,
             severity_overrides=cfg.rules.overrides,
+            thresholds=cfg.thresholds,
         )
 
     if effective_format == "json":

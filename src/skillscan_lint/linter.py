@@ -18,10 +18,11 @@ def lint_file(
     rules: list | None = None,
     skip_ids: set[str] | None = None,
     severity_overrides: dict[str, str] | None = None,
+    thresholds: object | None = None,
 ) -> LintResult:
     """Lint a single skill file and return a LintResult."""
     if rules is None:
-        rules = get_all_rules()
+        rules = get_all_rules(thresholds=thresholds)  # type: ignore[arg-type]
     if skip_ids is None:
         skip_ids = set()
     if severity_overrides is None:
@@ -69,6 +70,7 @@ def lint_directory(
     skip_ids: set[str] | None = None,
     include_graph: bool = True,
     severity_overrides: dict[str, str] | None = None,
+    thresholds: object | None = None,
 ) -> ScanSummary:
     """Lint all skill files under a directory."""
     if skip_ids is None:
@@ -76,7 +78,7 @@ def lint_directory(
     if severity_overrides is None:
         severity_overrides = {}
 
-    rules = get_all_rules()
+    rules = get_all_rules(thresholds=thresholds)  # type: ignore[arg-type]
     skill_paths = _collect_skill_files(root, recursive)
 
     results: list[LintResult] = []
@@ -84,7 +86,7 @@ def lint_directory(
     skipped = 0
 
     for path in skill_paths:
-        result = lint_file(path, rules=rules, skip_ids=skip_ids, severity_overrides=severity_overrides)
+        result = lint_file(path, rules=rules, skip_ids=skip_ids, severity_overrides=severity_overrides, thresholds=thresholds)
         results.append(result)
         if result.skipped:
             skipped += 1
