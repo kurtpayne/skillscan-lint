@@ -124,18 +124,19 @@ class LongSentenceRule(Rule):
     description = "Sentences longer than 35 words are hard to parse."
     suggestion_template = "Break the sentence into two shorter ones."
 
-    MAX_WORDS = 35
+    MAX_WORDS = 35  # class-level default; overridden by [thresholds] max_sentence_length
 
     def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
+        max_words = self._threshold("max_sentence_length", self.MAX_WORDS)
         findings = []
         text = _get_all_text(parsed)
         sentences = re.split(r"[.!?]+", text)
         for sentence in sentences:
             words = sentence.split()
-            if len(words) > self.MAX_WORDS:
+            if len(words) > max_words:
                 findings.append(self._finding(
                     path,
-                    f"Sentence has {len(words)} words (max {self.MAX_WORDS}): "
+                    f"Sentence has {len(words)} words (max {max_words}): "
                     f'"{sentence.strip()[:80]}…"',
                     suggestion=self.suggestion_template,
                 ))
@@ -309,17 +310,18 @@ class DescriptionTooShortRule(Rule):
     description = "Description must be at least 10 words to be meaningful to an LLM agent."
     suggestion_template = "Expand the description to clearly state what the skill does, its inputs, and its outputs."
 
-    MIN_WORDS = 10
+    MIN_WORDS = 10  # class-level default; overridden by [thresholds] min_description_words
 
     def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
+        min_words = self._threshold("min_description_words", self.MIN_WORDS)
         desc = _get_description(parsed)
         if not desc:
             return [self._finding(path, "Description field is missing or empty.")]
         words = desc.split()
-        if len(words) < self.MIN_WORDS:
+        if len(words) < min_words:
             return [self._finding(
                 path,
-                f"Description is only {len(words)} words (minimum {self.MIN_WORDS}). "
+                f"Description is only {len(words)} words (minimum {min_words}). "
                 "Add more detail about what the skill does.",
             )]
         return []
@@ -333,15 +335,16 @@ class DescriptionTooLongRule(Rule):
     description = "Descriptions over 150 words may exceed LLM context windows or reduce focus."
     suggestion_template = "Move detailed implementation notes to a 'notes' or 'details' section."
 
-    MAX_WORDS = 150
+    MAX_WORDS = 150  # class-level default; overridden by [thresholds] max_description_words
 
     def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
+        max_words = self._threshold("max_description_words", self.MAX_WORDS)
         desc = _get_description(parsed)
         words = desc.split()
-        if len(words) > self.MAX_WORDS:
+        if len(words) > max_words:
             return [self._finding(
                 path,
-                f"Description is {len(words)} words (maximum {self.MAX_WORDS}). "
+                f"Description is {len(words)} words (maximum {max_words}). "
                 "Consider moving detail to a notes section.",
             )]
         return []
