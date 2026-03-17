@@ -221,3 +221,236 @@ def test_graph_dangling_reference(tmp_path):
     summary = lint_directory(tmp_path, recursive=False, include_graph=True)
     all_ids = [f.rule_id for r in summary.results for f in r.findings]
     assert "GR-002" in all_ids, f"Expected GR-002 (dangling ref), got: {all_ids}"
+
+
+# ---------------------------------------------------------------------------
+# QL-016 — Weasel superlatives
+# ---------------------------------------------------------------------------
+
+def test_superlative_flagged(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0'\ndescription: "
+        "The best and most advanced tool for searching the web.\n---\n"
+    )
+    result = lint_file(skill)
+    rule_ids = {f.rule_id for f in result.findings}
+    assert "QL-016" in rule_ids, f"Expected QL-016 (superlative), got: {rule_ids}"
+
+
+def test_no_superlative_clean(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0'\n"
+        "description: Searches the web and returns the top 5 results.\n---\n"
+    )
+    result = lint_file(skill)
+    assert not any(f.rule_id == "QL-016" for f in result.findings)
+
+
+# ---------------------------------------------------------------------------
+# QL-017 — Nominalisations
+# ---------------------------------------------------------------------------
+
+def test_nominalisation_flagged(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0'\n"
+        "description: Handles the optimization of search queries for better results.\n---\n"
+    )
+    result = lint_file(skill)
+    rule_ids = {f.rule_id for f in result.findings}
+    assert "QL-017" in rule_ids, f"Expected QL-017 (nominalisation), got: {rule_ids}"
+
+
+# ---------------------------------------------------------------------------
+# QL-018 — Redundant phrases
+# ---------------------------------------------------------------------------
+
+def test_redundant_phrase_flagged(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0'\n"
+        "description: Returns the end result of the search operation.\n---\n"
+    )
+    result = lint_file(skill)
+    rule_ids = {f.rule_id for f in result.findings}
+    assert "QL-018" in rule_ids, f"Expected QL-018 (redundant phrase), got: {rule_ids}"
+
+
+# ---------------------------------------------------------------------------
+# QL-019 — Buzzwords
+# ---------------------------------------------------------------------------
+
+def test_buzzword_flagged(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0'\n"
+        "description: A game-changer that leverages synergy to improve outcomes.\n---\n"
+    )
+    result = lint_file(skill)
+    rule_ids = {f.rule_id for f in result.findings}
+    assert "QL-019" in rule_ids, f"Expected QL-019 (buzzword), got: {rule_ids}"
+
+
+# ---------------------------------------------------------------------------
+# QL-020 — Vague quantifiers
+# ---------------------------------------------------------------------------
+
+def test_vague_quantifier_flagged(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0'\n"
+        "description: Fetches several results from various sources.\n---\n"
+    )
+    result = lint_file(skill)
+    rule_ids = {f.rule_id for f in result.findings}
+    assert "QL-020" in rule_ids, f"Expected QL-020 (vague quantifier), got: {rule_ids}"
+
+
+def test_specific_quantifier_clean(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0'\n"
+        "description: Fetches up to 10 results from the configured search engine.\n---\n"
+    )
+    result = lint_file(skill)
+    assert not any(f.rule_id == "QL-020" for f in result.findings)
+
+
+# ---------------------------------------------------------------------------
+# QL-021 — Undefined acronyms
+# ---------------------------------------------------------------------------
+
+def test_undefined_acronym_flagged(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0'\n"
+        "description: Uses the SERP to retrieve organic search results.\n---\n"
+    )
+    result = lint_file(skill)
+    rule_ids = {f.rule_id for f in result.findings}
+    assert "QL-021" in rule_ids, f"Expected QL-021 (undefined acronym), got: {rule_ids}"
+
+
+def test_known_acronym_not_flagged(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0'\n"
+        "description: Calls an API endpoint and returns JSON results.\n---\n"
+    )
+    result = lint_file(skill)
+    assert not any(f.rule_id == "QL-021" for f in result.findings)
+
+
+def test_expanded_acronym_not_flagged(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0'\n"
+        "description: Uses the Search Engine Results Page (SERP) to find results.\n---\n"
+    )
+    result = lint_file(skill)
+    assert not any(f.rule_id == "QL-021" for f in result.findings)
+
+
+# ---------------------------------------------------------------------------
+# QL-022 — Double negatives
+# ---------------------------------------------------------------------------
+
+def test_double_negative_flagged(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0'\n"
+        "description: It is not uncommon for this skill to return empty results.\n---\n"
+    )
+    result = lint_file(skill)
+    rule_ids = {f.rule_id for f in result.findings}
+    assert "QL-022" in rule_ids, f"Expected QL-022 (double negative), got: {rule_ids}"
+
+
+# ---------------------------------------------------------------------------
+# QL-023 — Missing examples
+# ---------------------------------------------------------------------------
+
+def test_missing_examples_flagged(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0'\n"
+        "description: Fetches weather data for a given city.\n---\n"
+        "\n## Usage\n\nCall this skill with a city name.\n"
+    )
+    result = lint_file(skill)
+    rule_ids = {f.rule_id for f in result.findings}
+    assert "QL-023" in rule_ids, f"Expected QL-023 (missing examples), got: {rule_ids}"
+
+
+def test_yaml_examples_satisfies_rule(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0'\n"
+        "description: Fetches weather data for a given city.\n"
+        "examples:\n  - input: London\n    output: 15C, cloudy\n---\n"
+    )
+    result = lint_file(skill)
+    assert not any(f.rule_id == "QL-023" for f in result.findings)
+
+
+def test_markdown_examples_heading_satisfies_rule(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0'\n"
+        "description: Fetches weather data for a given city.\n---\n"
+        "\n## Examples\n\nCall with `get_weather(city='London')`.\n"
+    )
+    result = lint_file(skill)
+    assert not any(f.rule_id == "QL-023" for f in result.findings)
+
+
+# ---------------------------------------------------------------------------
+# QL-024 — Missing tags
+# ---------------------------------------------------------------------------
+
+def test_missing_tags_flagged(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0'\n"
+        "description: Fetches weather data for a given city.\n---\n"
+    )
+    result = lint_file(skill)
+    rule_ids = {f.rule_id for f in result.findings}
+    assert "QL-024" in rule_ids, f"Expected QL-024 (missing tags), got: {rule_ids}"
+
+
+def test_tags_present_no_flag(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0'\ntags: [weather, search]\n"
+        "description: Fetches weather data for a given city.\n---\n"
+    )
+    result = lint_file(skill)
+    assert not any(f.rule_id == "QL-024" for f in result.findings)
+
+
+# ---------------------------------------------------------------------------
+# QL-025 — Imperative mood
+# ---------------------------------------------------------------------------
+
+def test_weak_opener_flagged(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0'\n"
+        "description: This skill fetches weather data for a given city.\n---\n"
+    )
+    result = lint_file(skill)
+    rule_ids = {f.rule_id for f in result.findings}
+    assert "QL-025" in rule_ids, f"Expected QL-025 (imperative mood), got: {rule_ids}"
+
+
+def test_imperative_opener_clean(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0'\n"
+        "description: Fetches weather data for a given city and returns temperature.\n---\n"
+    )
+    result = lint_file(skill)
+    assert not any(f.rule_id == "QL-025" for f in result.findings)

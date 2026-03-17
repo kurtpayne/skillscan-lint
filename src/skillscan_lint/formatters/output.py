@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from typing import cast
 
 from skillscan_lint.models import ScanSummary, Severity
 
@@ -37,7 +38,7 @@ def format_compact(summary: ScanSummary) -> str:
 
 def format_json(summary: ScanSummary) -> str:
     """JSON output for CI integration."""
-    output = {
+    output: dict[str, object] = {
         "passed": summary.passed,
         "total_files": summary.total_files,
         "skipped_files": summary.skipped_files,
@@ -45,15 +46,11 @@ def format_json(summary: ScanSummary) -> str:
         "total_warnings": summary.total_warnings,
         "results": [],
     }
+    results: list[dict[str, object]] = cast(list, output["results"])
     for result in summary.results:
-        r: dict = {
-            "path": str(result.path),
-            "passed": result.passed,
-            "skipped": result.skipped,
-            "findings": [],
-        }
+        findings: list[dict[str, object]] = []
         for f in result.findings:
-            r["findings"].append({
+            findings.append({
                 "rule_id": f.rule_id,
                 "severity": f.severity.value,
                 "category": f.category.value,
@@ -61,7 +58,12 @@ def format_json(summary: ScanSummary) -> str:
                 "line": f.line,
                 "suggestion": f.suggestion,
             })
-        output["results"].append(r)
+        results.append({
+            "path": str(result.path),
+            "passed": result.passed,
+            "skipped": result.skipped,
+            "findings": findings,
+        })
     return json.dumps(output, indent=2)
 
 

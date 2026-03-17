@@ -428,3 +428,348 @@ class TodoInDescriptionRule(Rule):
                     line=i,
                 ))
         return findings
+
+# ---------------------------------------------------------------------------
+# Extended weasel-word rules (QL-016 – QL-020)
+# ---------------------------------------------------------------------------
+
+# Superlatives that are unsubstantiated claims
+WEASEL_SUPERLATIVES = re.compile(
+    r"\b(best|fastest|most\s+\w+|greatest|perfect|ultimate|state[- ]of[- ]the[- ]art|"
+    r"cutting[- ]edge|world[- ]class|industry[- ]leading|next[- ]gen(?:eration)?|"
+    r"revolutionary|unprecedented|unmatched|unparalleled)\b",
+    re.IGNORECASE,
+)
+
+
+@register
+class WeaselSuperlativeRule(Rule):
+    """QL-016 — Unsubstantiated superlatives make skill descriptions less credible."""
+
+    rule_id = "QL-016"
+    severity = Severity.WARNING
+    category = Category.WEASEL
+    description = "Unsubstantiated superlatives reduce credibility and add no information."
+    suggestion_template = "Replace the superlative with a concrete, measurable claim or remove it."
+
+    def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
+        findings = []
+        text = _get_all_text(parsed)
+        for i, line in _iter_lines(text):
+            m = WEASEL_SUPERLATIVES.search(line)
+            if m:
+                findings.append(self._finding(
+                    path,
+                    f"Unsubstantiated superlative \"{m.group()}\" in: \"{line.strip()[:80]}\"",
+                    line=i,
+                ))
+        return findings
+
+
+# Nominalisation patterns — verb-derived nouns that obscure the action
+_NOMINALISATIONS = re.compile(
+    r"\b(utilization|utilisation|implementation|facilitation|"
+    r"optimization|optimisation|leveraging|operationalization|"
+    r"operationalisation|conceptualization|conceptualisation|"
+    r"functionalization|instantiation)\b",
+    re.IGNORECASE,
+)
+
+
+@register
+class NominalisationRule(Rule):
+    """QL-017 — Nominalisations (verb-derived nouns) obscure meaning."""
+
+    rule_id = "QL-017"
+    severity = Severity.INFO
+    category = Category.READABILITY
+    description = "Nominalisations obscure the action; prefer active verbs."
+    suggestion_template = 'Replace the nominalisation with a direct verb (e.g. "use" instead of "utilization").'
+
+    def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
+        findings = []
+        text = _get_all_text(parsed)
+        for i, line in _iter_lines(text):
+            m = _NOMINALISATIONS.search(line)
+            if m:
+                findings.append(self._finding(
+                    path,
+                    f"Nominalisation \"{m.group()}\" found; prefer an active verb: \"{line.strip()[:80]}\"",
+                    line=i,
+                ))
+        return findings
+
+
+# Redundant pairs — phrases where one word is sufficient
+_REDUNDANT_PAIRS = re.compile(
+    r"\b(each and every|first and foremost|null and void|"
+    r"true and accurate|end result|future plans|past history|"
+    r"past experience|advance planning|close proximity|"
+    r"completely finish|completely eliminate|unexpected surprise|"
+    r"added bonus|free gift|final outcome|basic fundamentals?|"
+    r"brief summary|collaborate together|cooperate together|"
+    r"join together|merge together|repeat again|revert back|"
+    r"return back|sum total|total sum|absolutely essential|"
+    r"absolutely necessary|completely full|completely empty)\b",
+    re.IGNORECASE,
+)
+
+
+@register
+class RedundantPhraseRule(Rule):
+    """QL-018 — Redundant phrases add words without adding meaning."""
+
+    rule_id = "QL-018"
+    severity = Severity.INFO
+    category = Category.READABILITY
+    description = "Redundant phrase: one of the words is already implied by the other."
+    suggestion_template = "Remove the redundant word (e.g. 'end result' -> 'result')."
+
+    def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
+        findings = []
+        text = _get_all_text(parsed)
+        for i, line in _iter_lines(text):
+            m = _REDUNDANT_PAIRS.search(line)
+            if m:
+                findings.append(self._finding(
+                    path,
+                    f"Redundant phrase \"{m.group()}\" in: \"{line.strip()[:80]}\"",
+                    line=i,
+                ))
+        return findings
+
+
+# Jargon / buzzwords that obscure meaning for LLM agents
+_BUZZWORDS = re.compile(
+    r"\b(synergy|synergize|synergistic|paradigm shift|disruptive|"
+    r"circle back|move the needle|low[- ]hanging fruit|boil the ocean|"
+    r"deep[- ]dive|ping\s+(?:me|us|them)|touch\s+base|"
+    r"take\s+(?:this|it)\s+offline|at\s+the\s+end\s+of\s+the\s+day|"
+    r"going\s+forward|proactive(?:ly)?|value[- ]add(?:ed)?|"
+    r"game[- ]changer|thought\s+leader(?:ship)?)\b",
+    re.IGNORECASE,
+)
+
+
+@register
+class BuzzwordRule(Rule):
+    """QL-019 — Business buzzwords reduce clarity for LLM agents."""
+
+    rule_id = "QL-019"
+    severity = Severity.WARNING
+    category = Category.WEASEL
+    description = "Business buzzword adds no actionable information for an LLM agent."
+    suggestion_template = "Replace the buzzword with a plain-language description of the actual action or outcome."
+
+    def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
+        findings = []
+        text = _get_all_text(parsed)
+        for i, line in _iter_lines(text):
+            m = _BUZZWORDS.search(line)
+            if m:
+                findings.append(self._finding(
+                    path,
+                    f"Buzzword \"{m.group()}\" found: \"{line.strip()[:80]}\"",
+                    line=i,
+                ))
+        return findings
+
+
+# Weasel numbers — vague quantifiers that should be specific
+_VAGUE_QUANTIFIERS = re.compile(
+    r"\b(some|several|many|few|a\s+number\s+of|a\s+lot\s+of|"
+    r"lots\s+of|a\s+bunch\s+of|a\s+variety\s+of|a\s+range\s+of|"
+    r"a\s+series\s+of|a\s+set\s+of|various|numerous|countless|"
+    r"multiple|most|most\s+of|the\s+majority\s+of|"
+    r"a\s+significant\s+(?:number|amount|portion)\s+of|"
+    r"a\s+large\s+(?:number|amount|portion)\s+of)\b",
+    re.IGNORECASE,
+)
+
+
+@register
+class VagueQuantifierRule(Rule):
+    """QL-020 — Vague quantifiers should be replaced with specific values."""
+
+    rule_id = "QL-020"
+    severity = Severity.INFO
+    category = Category.WEASEL
+    description = "Vague quantifier provides no concrete information; use a specific value."
+    suggestion_template = "Replace the vague quantifier with a specific number or range."
+
+    def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
+        findings = []
+        desc = _get_description(parsed)
+        for i, line in _iter_lines(desc):
+            m = _VAGUE_QUANTIFIERS.search(line)
+            if m:
+                findings.append(self._finding(
+                    path,
+                    f"Vague quantifier \"{m.group()}\" in description: \"{line.strip()[:80]}\"",
+                    line=i,
+                ))
+        return findings
+
+
+# ---------------------------------------------------------------------------
+# Ambiguity / clarity rules (QL-021 – QL-025)
+# ---------------------------------------------------------------------------
+
+_ACRONYM_RE = re.compile(r"\b([A-Z]{2,6})\b")
+_KNOWN_ACRONYMS = {
+    "AI", "ML", "LLM", "API", "URL", "HTTP", "HTTPS", "JSON", "YAML",
+    "CSV", "SQL", "PDF", "HTML", "CSS", "JS", "TS", "SDK", "CLI",
+    "CI", "CD", "PR", "UI", "UX", "ID", "UUID", "UTC", "ISO",
+    "REST", "RPC", "GRPC", "JWT", "SSH", "TLS", "SSL", "DNS",
+    "AWS", "GCP", "GCS", "S3", "IAM", "VPC", "EC2", "ECS", "EKS",
+    "CPU", "GPU", "RAM", "SSD", "HDD", "OS", "VM", "K8S", "K8",
+    "NLP", "OCR", "RAG", "RLHF", "DPO", "SFT",
+    "TODO", "FIXME", "NOTE", "WARN", "INFO", "DEBUG", "ERROR",
+    "OK", "EOF", "EOL", "EOD", "EOM", "EOY", "ETA", "SLA", "SLO",
+    "CRUD", "ORM", "MVC", "MVP", "POC", "RFC", "TBD", "WIP",
+    "SARIF", "SBOM", "CVE", "CWE", "OWASP", "NIST", "SOC", "PCI",
+}
+_EXPANSION_RE = re.compile(r"\b\w[\w\s]+\s+\(([A-Z]{2,6})\)")
+
+
+@register
+class UndefinedAcronymRule(Rule):
+    """QL-021 — Undefined acronyms reduce clarity for LLM agents."""
+
+    rule_id = "QL-021"
+    severity = Severity.WARNING
+    category = Category.CLARITY
+    description = "Acronym used without definition; define it on first use."
+    suggestion_template = 'Define the acronym on first use: "Full Name (ACRONYM)".'
+
+    def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
+        text = _get_all_text(parsed)
+        defined = set(_EXPANSION_RE.findall(text))
+        findings = []
+        seen: set[str] = set()
+        for i, line in _iter_lines(text):
+            for m in _ACRONYM_RE.finditer(line):
+                acr = m.group(1)
+                if acr in _KNOWN_ACRONYMS or acr in defined or acr in seen:
+                    continue
+                seen.add(acr)
+                findings.append(self._finding(
+                    path,
+                    f"Acronym \"{acr}\" used without definition: \"{line.strip()[:80]}\"",
+                    line=i,
+                ))
+        return findings
+
+
+_DOUBLE_NEG_RE = re.compile(
+    r"\b(not\s+un\w+|not\s+without|"
+    r"cannot\s+(?:deny|disagree|dispute)|"
+    r"never\s+not|hardly\s+(?:ever\s+)?not|"
+    r"not\s+(?:impossible|unlikely|uncommon|unusual|unheard))\b",
+    re.IGNORECASE,
+)
+
+
+@register
+class DoubleNegativeRule(Rule):
+    """QL-022 — Double negatives are harder to parse than positive statements."""
+
+    rule_id = "QL-022"
+    severity = Severity.WARNING
+    category = Category.CLARITY
+    description = "Double negative is harder to parse; rewrite as a positive statement."
+    suggestion_template = 'Rewrite as a positive statement (e.g. "not uncommon" -> "common").'
+
+    def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
+        findings = []
+        text = _get_all_text(parsed)
+        for i, line in _iter_lines(text):
+            m = _DOUBLE_NEG_RE.search(line)
+            if m:
+                findings.append(self._finding(
+                    path,
+                    f"Double negative \"{m.group()}\" in: \"{line.strip()[:80]}\"",
+                    line=i,
+                ))
+        return findings
+
+
+@register
+class MissingExamplesRule(Rule):
+    """QL-023 — Skills without examples are harder for LLM agents to invoke correctly."""
+
+    rule_id = "QL-023"
+    severity = Severity.WARNING
+    category = Category.COMPLETENESS
+    description = "Skill has no examples; add an 'examples' section to guide LLM agents."
+    suggestion_template = (
+        "Add an 'examples:' list to the YAML front-matter, or a '## Examples' section "
+        "in the Markdown body with at least one concrete usage example."
+    )
+
+    _EXAMPLES_HEADING = re.compile(r"^#{1,3}\s+examples?\b", re.IGNORECASE | re.MULTILINE)
+
+    def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
+        has_yaml_examples = bool(parsed.get("examples"))
+        has_md_examples = bool(self._EXAMPLES_HEADING.search(content))
+        if not has_yaml_examples and not has_md_examples:
+            return [self._finding(
+                path,
+                "No 'examples' section found. Add examples to help LLM agents invoke this skill correctly.",
+            )]
+        return []
+
+
+@register
+class MissingTagsRule(Rule):
+    """QL-024 — Skills without tags are harder to discover and categorise."""
+
+    rule_id = "QL-024"
+    severity = Severity.INFO
+    category = Category.COMPLETENESS
+    description = "Skill has no tags; add at least one tag for discoverability."
+    suggestion_template = "Add a 'tags:' list to the YAML front-matter (e.g. tags: [search, web])."
+
+    def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
+        tags = parsed.get("tags")
+        if not tags or (isinstance(tags, (list, tuple)) and len(tags) == 0):
+            return [self._finding(
+                path,
+                "No 'tags' field found. Add tags to improve discoverability.",
+            )]
+        return []
+
+
+_IMPERATIVE_STARTERS = re.compile(
+    r"^(This\s+skill|The\s+skill|This\s+tool|The\s+tool|"
+    r"It\s+(?:will|can|should|does|is)|"
+    r"A\s+skill\s+that|An?\s+\w+\s+that)\b",
+    re.IGNORECASE,
+)
+
+
+@register
+class ImperativeMoodRule(Rule):
+    """QL-025 — Skill descriptions should start with an imperative verb."""
+
+    rule_id = "QL-025"
+    severity = Severity.INFO
+    category = Category.READABILITY
+    description = "Description should start with an imperative verb, not 'This skill' or 'It will'."
+    suggestion_template = (
+        'Start the description with an imperative verb, e.g. "Fetches weather data..." '
+        'instead of "This skill fetches weather data...".'
+    )
+
+    def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
+        desc = _get_description(parsed).strip()
+        if not desc:
+            return []
+        first_sentence = re.split(r"[.!?]", desc)[0].strip()
+        if _IMPERATIVE_STARTERS.match(first_sentence):
+            return [self._finding(
+                path,
+                f"Description starts with a weak opener: \"{first_sentence[:80]}\". "
+                "Use an imperative verb instead.",
+            )]
+        return []
