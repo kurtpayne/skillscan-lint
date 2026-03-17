@@ -17,12 +17,15 @@ def lint_file(
     path: Path,
     rules: list | None = None,
     skip_ids: set[str] | None = None,
+    severity_overrides: dict[str, str] | None = None,
 ) -> LintResult:
     """Lint a single skill file and return a LintResult."""
     if rules is None:
         rules = get_all_rules()
     if skip_ids is None:
         skip_ids = set()
+    if severity_overrides is None:
+        severity_overrides = {}
 
     try:
         content, parsed = parse_skill_file(path)
@@ -36,6 +39,22 @@ def lint_file(
             continue
         try:
             rule_findings = rule.check(path, content, parsed)
+            # Apply severity overrides from config
+            if rule.rule_id in severity_overrides:
+                from skillscan_lint.models import Severity
+                new_sev = Severity(severity_overrides[rule.rule_id])
+                rule_findings = [
+                    LintFinding(
+                        rule_id=f.rule_id,
+                        severity=new_sev,
+                        category=f.category,
+                        message=f.message,
+                        path=f.path,
+                        line=f.line,
+                        suggestion=f.suggestion,
+                    )
+                    for f in rule_findings
+                ]
             findings.extend(rule_findings)
         except Exception:  # noqa: BLE001
             # Rule errors should never crash the linter
@@ -49,10 +68,13 @@ def lint_directory(
     recursive: bool = True,
     skip_ids: set[str] | None = None,
     include_graph: bool = True,
+    severity_overrides: dict[str, str] | None = None,
 ) -> ScanSummary:
     """Lint all skill files under a directory."""
     if skip_ids is None:
         skip_ids = set()
+    if severity_overrides is None:
+        severity_overrides = {}
 
     rules = get_all_rules()
     skill_paths = _collect_skill_files(root, recursive)
@@ -62,7 +84,7 @@ def lint_directory(
     skipped = 0
 
     for path in skill_paths:
-        result = lint_file(path, rules=rules, skip_ids=skip_ids)
+        result = lint_file(path, rules=rules, skip_ids=skip_ids, severity_overrides=severity_overrides)
         results.append(result)
         if result.skipped:
             skipped += 1

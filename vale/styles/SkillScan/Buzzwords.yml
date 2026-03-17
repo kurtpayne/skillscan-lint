@@ -1,0 +1,29 @@
+# SkillScan/Buzzwords.yml
+# Mirrors skillscan-lint rule QL-019
+# Business buzzwords add no actionable information for LLM agents.
+extends: existence
+message: "Buzzword '%s' adds no actionable information. Replace with a plain-language description of the actual action or outcome."
+link: https://github.com/kurtpayne/skillscan-lint#ql-019
+level: warning
+ignorecase: true
+tokens:
+  - synergy
+  - synergize
+  - synergistic
+  - paradigm shift
+  - disruptive
+  - circle back
+  - move the needle
+  - low-hanging fruit
+  - low hanging fruit
+  - boil the ocean
+  - deep-dive
+  - deep dive
+  - touch base
+  - going forward
+  - proactively?
+  - value-add
+  - value add
+  - game-changer
+  - game changer
+  - thought leadership

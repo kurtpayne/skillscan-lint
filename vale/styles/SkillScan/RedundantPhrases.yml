@@ -1,0 +1,33 @@
+# SkillScan/RedundantPhrases.yml
+# Mirrors skillscan-lint rule QL-018
+# Redundant word pairs add words without adding meaning.
+extends: substitution
+message: "Redundant phrase '%s'. Use '%s' instead."
+link: https://github.com/kurtpayne/skillscan-lint#ql-018
+level: suggestion
+ignorecase: true
+swap:
+  end result: result
+  past history: history
+  past experience: experience
+  future plans: plans
+  advance planning: planning
+  close proximity: proximity
+  added bonus: bonus
+  free gift: gift
+  final outcome: outcome
+  basic fundamentals: fundamentals
+  brief summary: summary
+  unexpected surprise: surprise
+  revert back: revert
+  return back: return
+  repeat again: repeat
+  sum total: total
+  collaborate together: collaborate
+  cooperate together: cooperate
+  join together: join
+  merge together: merge
+  completely finish: finish
+  completely eliminate: eliminate
+  absolutely essential: essential
+  absolutely necessary: necessary

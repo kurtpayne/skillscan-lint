@@ -1,0 +1,28 @@
+# SkillScan/Superlatives.yml
+# Mirrors skillscan-lint rule QL-016
+# Unsubstantiated superlatives reduce credibility.
+extends: existence
+message: "Unsubstantiated superlative '%s'. Replace with a concrete, measurable claim or remove it."
+link: https://github.com/kurtpayne/skillscan-lint#ql-016
+level: warning
+ignorecase: true
+tokens:
+  - best
+  - fastest
+  - greatest
+  - perfect
+  - ultimate
+  - state-of-the-art
+  - state of the art
+  - cutting-edge
+  - cutting edge
+  - world-class
+  - world class
+  - industry-leading
+  - industry leading
+  - next-generation
+  - next generation
+  - revolutionary
+  - unprecedented
+  - unmatched
+  - unparalleled

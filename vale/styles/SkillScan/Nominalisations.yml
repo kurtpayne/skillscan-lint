@@ -1,0 +1,21 @@
+# SkillScan/Nominalisations.yml
+# Mirrors skillscan-lint rule QL-017
+# Verb-derived nouns obscure the action; prefer active verbs.
+extends: substitution
+message: "Nominalisation '%s'. Consider using the verb form '%s' instead."
+link: https://github.com/kurtpayne/skillscan-lint#ql-017
+level: suggestion
+ignorecase: true
+swap:
+  utilization: use
+  utilisation: use
+  implementation: implement
+  facilitation: facilitate
+  optimization: optimize
+  optimisation: optimise
+  leveraging: leverage → use
+  operationalization: operationalize
+  operationalisation: operationalise
+  conceptualization: conceptualize
+  conceptualisation: conceptualise
+  instantiation: instantiate

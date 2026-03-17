@@ -1,0 +1,35 @@
+# .skillscan-lint.toml — Example configuration for skillscan-lint
+#
+# Copy this file to .skillscan-lint.toml in your project root.
+# skillscan-lint auto-discovers this file by walking up from the scanned path.
+# Override with: skillscan-lint scan ./skills --config path/to/config.toml
+
+[rules]
+# Disable individual rules by ID.
+# Run `skillscan-lint rules` to see all available rule IDs.
+disable = []
+
+# Override the severity of specific rules.
+# Valid values: "error", "warning", "info"
+[rules.overrides]
+# "QL-017" = "error"   # promote nominalisation to error
+# "QL-004" = "info"    # demote weasel intensifiers to info
+
+[thresholds]
+# Maximum word count for a description field (default: 80)
+max_description_words = 80
+# Minimum word count for a description field (default: 10)
+min_description_words = 10
+# Maximum sentence length in words (default: 30)
+max_sentence_length = 30
+
+[graph]
+# Skip skill invocation graph analysis (default: false)
+skip_graph = false
+
+[output]
+# Default output format: rich | compact | json (default: rich)
+format = "rich"
+# Exit with non-zero code when findings at this level or above are found.
+# Values: error | warning | never (default: error)
+fail_on = "error"

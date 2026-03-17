@@ -1,0 +1,21 @@
+# SkillScan/WeaselHedges.yml
+# Mirrors skillscan-lint rule QL-005
+# Hedge words reduce confidence and precision in skill descriptions.
+extends: existence
+message: "Hedge word '%s' reduces confidence. Replace with a definitive statement or specify the condition explicitly."
+link: https://github.com/kurtpayne/skillscan-lint#ql-005
+level: suggestion
+ignorecase: true
+tokens:
+  - somehow
+  - seems?
+  - appears?
+  - apparently
+  - possibly
+  - perhaps
+  - maybe
+  - generally
+  - usually
+  - typically
+  - normally
+  - often
