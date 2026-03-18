@@ -172,7 +172,7 @@ def _is_skill_entry(path: Path) -> bool:
 
 def build_skill_graph(
     skill_files: list[tuple[Path, str, dict[str, Any]]],
-) -> tuple["nx.DiGraph", dict[str, Path]]:
+) -> tuple[nx.DiGraph, dict[str, Path]]:
     """Build a directed graph from a list of (path, content, parsed) tuples.
 
     Only SKILL.md / YAML skill files are graph nodes.  Other .md files
