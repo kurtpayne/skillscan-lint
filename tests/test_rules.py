@@ -192,33 +192,37 @@ def test_description_too_long(tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_graph_cycle_detected(tmp_path):
-    skill_a = tmp_path / "skill_a.md"
-    skill_b = tmp_path / "skill_b.md"
-    skill_a.write_text(
+    # Skills must be SKILL.md files (in subdirs) to be treated as graph nodes
+    dir_a = tmp_path / "skill-a"
+    dir_b = tmp_path / "skill-b"
+    dir_a.mkdir()
+    dir_b.mkdir()
+    (dir_a / "SKILL.md").write_text(
         "---\nname: skill_a\nversion: '1.0.0'\n"
         "description: Skill A fetches data from the API and returns JSON.\n"
         "invoke: skill_b\n---\n"
     )
-    skill_b.write_text(
+    (dir_b / "SKILL.md").write_text(
         "---\nname: skill_b\nversion: '1.0.0'\n"
         "description: Skill B processes data from the API and returns JSON.\n"
         "invoke: skill_a\n---\n"
     )
     from skillscan_lint.linter import lint_directory
-    summary = lint_directory(tmp_path, recursive=False, include_graph=True)
+    summary = lint_directory(tmp_path, recursive=True, include_graph=True)
     all_ids = [f.rule_id for r in summary.results for f in r.findings]
     assert "GR-001" in all_ids, f"Expected GR-001 (cycle), got: {all_ids}"
 
 
 def test_graph_dangling_reference(tmp_path):
-    skill_a = tmp_path / "skill_a.md"
-    skill_a.write_text(
+    dir_a = tmp_path / "skill-a"
+    dir_a.mkdir()
+    (dir_a / "SKILL.md").write_text(
         "---\nname: skill_a\nversion: '1.0.0'\n"
         "description: Skill A fetches data from the API and returns JSON.\n"
         "invoke: nonexistent_skill\n---\n"
     )
     from skillscan_lint.linter import lint_directory
-    summary = lint_directory(tmp_path, recursive=False, include_graph=True)
+    summary = lint_directory(tmp_path, recursive=True, include_graph=True)
     all_ids = [f.rule_id for r in summary.results for f in r.findings]
     assert "GR-002" in all_ids, f"Expected GR-002 (dangling ref), got: {all_ids}"
 
