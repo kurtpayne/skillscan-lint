@@ -8,7 +8,7 @@ from pathlib import Path
 import click
 
 from skillscan_lint.config import LintConfig, load_config
-from skillscan_lint.formatters.output import format_compact, format_json, print_rich
+from skillscan_lint.formatters.output import format_compact, format_json, format_sarif, print_rich
 from skillscan_lint.linter import lint_directory
 from skillscan_lint.models import ScanSummary
 
@@ -24,7 +24,7 @@ def main() -> None:
 @click.option(
     "--format",
     "output_format",
-    type=click.Choice(["rich", "compact", "json"]),
+    type=click.Choice(["rich", "compact", "json", "sarif"]),
     default=None,
     show_default=False,
     help="Output format (default: from config or 'rich').",
@@ -110,6 +110,8 @@ def scan_cmd(
         click.echo(format_json(summary))
     elif effective_format == "compact":
         click.echo(format_compact(summary))
+    elif effective_format == "sarif":
+        click.echo(format_sarif(summary))
     else:
         print_rich(summary)
 
