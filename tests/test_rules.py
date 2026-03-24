@@ -458,3 +458,300 @@ def test_imperative_opener_clean(tmp_path):
     )
     result = lint_file(skill)
     assert not any(f.rule_id == "QL-025" for f in result.findings)
+
+
+# ---------------------------------------------------------------------------
+# QL-026 — Unknown frontmatter keys
+# ---------------------------------------------------------------------------
+
+def test_unknown_frontmatter_key_flagged(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0.0'\n"
+        "description: Fetches data.\n"
+        "custom_field: some_value\n---\n"
+    )
+    result = lint_file(skill)
+    rule_ids = {f.rule_id for f in result.findings}
+    assert "QL-026" in rule_ids, f"Expected QL-026 (unknown frontmatter key), got: {rule_ids}"
+
+
+def test_standard_frontmatter_keys_no_flag(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0.0'\n"
+        "description: Fetches data.\ntags: [search]\n"
+        "allowed-tools: [web_search]\nexamples:\n  - input: test\n---\n"
+    )
+    result = lint_file(skill)
+    assert not any(f.rule_id == "QL-026" for f in result.findings)
+
+
+# ---------------------------------------------------------------------------
+# QL-027 — Invalid version string
+# ---------------------------------------------------------------------------
+
+def test_invalid_version_flagged(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: 'v1.0'\n"
+        "description: Fetches data.\n---\n"
+    )
+    result = lint_file(skill)
+    rule_ids = {f.rule_id for f in result.findings}
+    assert "QL-027" in rule_ids, f"Expected QL-027 (invalid version), got: {rule_ids}"
+
+
+def test_valid_semver_no_flag(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.2.3'\n"
+        "description: Fetches data.\n---\n"
+    )
+    result = lint_file(skill)
+    assert not any(f.rule_id == "QL-027" for f in result.findings)
+
+
+def test_semver_with_prerelease_no_flag(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '2.0.0-beta.1'\n"
+        "description: Fetches data.\n---\n"
+    )
+    result = lint_file(skill)
+    assert not any(f.rule_id == "QL-027" for f in result.findings)
+
+
+# ---------------------------------------------------------------------------
+# QL-028 — Vague tool references
+# ---------------------------------------------------------------------------
+
+def test_vague_tool_reference_flagged(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0.0'\n"
+        "description: Fetches data.\n---\n"
+        "\n## Usage\n\nUse the tool to search for results.\n"
+    )
+    result = lint_file(skill)
+    rule_ids = {f.rule_id for f in result.findings}
+    assert "QL-028" in rule_ids, f"Expected QL-028 (vague tool reference), got: {rule_ids}"
+
+
+def test_specific_tool_name_no_flag(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0.0'\n"
+        "description: Fetches data.\n---\n"
+        "\n## Usage\n\nCall search_web(query=...) to search for results.\n"
+    )
+    result = lint_file(skill)
+    assert not any(f.rule_id == "QL-028" for f in result.findings)
+
+
+# ---------------------------------------------------------------------------
+# QL-029 — Description capability mismatch
+# ---------------------------------------------------------------------------
+
+def test_capability_mismatch_flagged(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0.0'\n"
+        "description: Executes shell commands to deploy the service.\n"
+        "allowed-tools: [web_search]\n---\n"
+    )
+    result = lint_file(skill)
+    rule_ids = {f.rule_id for f in result.findings}
+    assert "QL-029" in rule_ids, f"Expected QL-029 (capability mismatch), got: {rule_ids}"
+
+
+def test_capability_declared_no_flag(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0.0'\n"
+        "description: Executes shell commands to deploy the service.\n"
+        "allowed-tools: [Bash, web_search]\n---\n"
+    )
+    result = lint_file(skill)
+    assert not any(f.rule_id == "QL-029" for f in result.findings)
+
+
+# ---------------------------------------------------------------------------
+# QL-030 — Unjustified high-risk tool
+# ---------------------------------------------------------------------------
+
+def test_unjustified_bash_flagged(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0.0'\n"
+        "description: Searches the web for information.\n"
+        "allowed-tools: [Bash]\n---\n"
+    )
+    result = lint_file(skill)
+    rule_ids = {f.rule_id for f in result.findings}
+    assert "QL-030" in rule_ids, f"Expected QL-030 (unjustified Bash), got: {rule_ids}"
+
+
+def test_justified_bash_no_flag(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0.0'\n"
+        "description: Automates CI/CD pipeline by running build scripts.\n"
+        "allowed-tools: [Bash]\n---\n"
+    )
+    result = lint_file(skill)
+    assert not any(f.rule_id == "QL-030" for f in result.findings)
+
+
+# ---------------------------------------------------------------------------
+# QL-031 — Missing changelog
+# ---------------------------------------------------------------------------
+
+def test_missing_changelog_flagged(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0.0'\n"
+        "description: Fetches data.\n---\n"
+        "\n## Usage\n\nCall this skill.\n"
+    )
+    result = lint_file(skill)
+    rule_ids = {f.rule_id for f in result.findings}
+    assert "QL-031" in rule_ids, f"Expected QL-031 (missing changelog), got: {rule_ids}"
+
+
+def test_yaml_changelog_satisfies_rule(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0.0'\n"
+        "description: Fetches data.\n"
+        "changelog:\n  - version: '1.0.0'\n    note: Initial release\n---\n"
+    )
+    result = lint_file(skill)
+    assert not any(f.rule_id == "QL-031" for f in result.findings)
+
+
+def test_markdown_changelog_satisfies_rule(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0.0'\n"
+        "description: Fetches data.\n---\n"
+        "\n## Changelog\n\n- 1.0.0: Initial release\n"
+    )
+    result = lint_file(skill)
+    assert not any(f.rule_id == "QL-031" for f in result.findings)
+
+
+# ---------------------------------------------------------------------------
+# QL-032 — Missing Inputs/Outputs sections
+# ---------------------------------------------------------------------------
+
+def test_missing_inputs_outputs_flagged(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0.0'\n"
+        "description: Fetches data.\n---\n"
+        "\n## Usage\n\nCall this skill.\n"
+    )
+    result = lint_file(skill)
+    rule_ids = {f.rule_id for f in result.findings}
+    assert "QL-032" in rule_ids, f"Expected QL-032 (missing inputs/outputs), got: {rule_ids}"
+
+
+def test_inputs_section_satisfies_rule(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0.0'\n"
+        "description: Fetches data.\n---\n"
+        "\n## Inputs\n\n- query: string\n"
+    )
+    result = lint_file(skill)
+    assert not any(f.rule_id == "QL-032" for f in result.findings)
+
+
+def test_outputs_section_satisfies_rule(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0.0'\n"
+        "description: Fetches data.\n---\n"
+        "\n## Outputs\n\n- result: string\n"
+    )
+    result = lint_file(skill)
+    assert not any(f.rule_id == "QL-032" for f in result.findings)
+
+
+# ---------------------------------------------------------------------------
+# QL-033 — Missing When to Use section
+# ---------------------------------------------------------------------------
+
+def test_missing_when_to_use_flagged(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0.0'\n"
+        "description: Fetches data.\n---\n"
+        "\n## Usage\n\nCall this skill.\n"
+    )
+    result = lint_file(skill)
+    rule_ids = {f.rule_id for f in result.findings}
+    assert "QL-033" in rule_ids, f"Expected QL-033 (missing when to use), got: {rule_ids}"
+
+
+def test_when_to_use_section_no_flag(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0.0'\n"
+        "description: Fetches data.\n---\n"
+        "\n## When to Use\n\nUse this skill when you need to fetch data.\n"
+    )
+    result = lint_file(skill)
+    assert not any(f.rule_id == "QL-033" for f in result.findings)
+
+
+# ---------------------------------------------------------------------------
+# QL-034 — Missing Prerequisites section for CLI tools
+# ---------------------------------------------------------------------------
+
+def test_cli_tool_without_prerequisites_flagged(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0.0'\n"
+        "description: Deploys to Kubernetes.\n---\n"
+        "\n## Usage\n\nRun kubectl apply -f deployment.yaml to deploy.\n"
+    )
+    result = lint_file(skill)
+    rule_ids = {f.rule_id for f in result.findings}
+    assert "QL-034" in rule_ids, f"Expected QL-034 (missing prerequisites), got: {rule_ids}"
+
+
+def test_prerequisites_section_satisfies_rule(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0.0'\n"
+        "description: Deploys to Kubernetes.\n---\n"
+        "\n## Prerequisites\n\n- kubectl >= 1.28\n- kubeconfig configured\n"
+        "\n## Usage\n\nRun kubectl apply -f deployment.yaml to deploy.\n"
+    )
+    result = lint_file(skill)
+    assert not any(f.rule_id == "QL-034" for f in result.findings)
+
+
+def test_compatibility_field_satisfies_rule(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0.0'\n"
+        "description: Deploys to Kubernetes.\n"
+        "compatibility:\n  kubectl: '>=1.28'\n---\n"
+        "\n## Usage\n\nRun kubectl apply -f deployment.yaml to deploy.\n"
+    )
+    result = lint_file(skill)
+    assert not any(f.rule_id == "QL-034" for f in result.findings)
+
+
+def test_no_cli_tools_no_flag(tmp_path):
+    skill = tmp_path / "skill.md"
+    skill.write_text(
+        "---\nname: my_skill\nversion: '1.0.0'\n"
+        "description: Fetches weather data.\n---\n"
+        "\n## Usage\n\nCall this skill with a city name.\n"
+    )
+    result = lint_file(skill)
+    assert not any(f.rule_id == "QL-034" for f in result.findings)

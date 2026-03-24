@@ -776,3 +776,353 @@ class ImperativeMoodRule(Rule):
                 "Use an imperative verb instead.",
             )]
         return []
+
+
+# ---------------------------------------------------------------------------
+# M10.9 — Vendor corpus audit rules (QL-026 – QL-034)
+# ---------------------------------------------------------------------------
+
+# Standard frontmatter keys recognised by the Manus skill schema.
+# Unknown keys outside this set are flagged by QL-026.
+_STANDARD_FRONTMATTER_KEYS: frozenset[str] = frozenset({
+    # Identity
+    "name", "version", "description", "author", "license",
+    # Capability declarations
+    "allowed-tools", "allowed_tools", "tools", "capabilities",
+    # Classification
+    "tags", "category", "categories",
+    # Documentation
+    "examples", "usage", "notes", "changelog", "updated",
+    # Compatibility
+    "compatibility", "prerequisites", "requires",
+    # Internal parser keys — not from frontmatter
+    "_body", "_path",
+})
+
+# Semver pattern: MAJOR.MINOR.PATCH with optional pre-release / build metadata
+_SEMVER_RE = re.compile(
+    r"^\d+\.\d+(\.\d+)?([.-][a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?$"
+)
+
+
+@register
+class UnknownFrontmatterKeyRule(Rule):
+    """QL-026 — Unknown frontmatter keys may indicate typos or non-standard extensions."""
+
+    rule_id = "QL-026"
+    severity = Severity.WARNING
+    category = Category.STRUCTURE
+    description = "Unknown frontmatter key; use the standard skill schema keys."
+    suggestion_template = (
+        "Remove or rename the key to one of the standard keys: "
+        "name, version, description, allowed-tools, tags, examples, changelog, etc."
+    )
+
+    def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
+        findings = []
+        for key in parsed:
+            if key in _STANDARD_FRONTMATTER_KEYS:
+                continue
+            # Allow kebab-case variants of known keys
+            normalised = key.replace("-", "_").lower()
+            if normalised in {k.replace("-", "_").lower() for k in _STANDARD_FRONTMATTER_KEYS}:
+                continue
+            findings.append(self._finding(
+                path,
+                f"Unknown frontmatter key \"{key}\"; not in the standard skill schema.",
+            ))
+        return findings
+
+
+@register
+class InvalidVersionRule(Rule):
+    """QL-027 — Non-semver version strings cause parsing issues in registries."""
+
+    rule_id = "QL-027"
+    severity = Severity.WARNING
+    category = Category.STRUCTURE
+    description = "Version field is not a valid semver string (MAJOR.MINOR.PATCH)."
+    suggestion_template = (
+        "Use a semver version string, e.g. '1.0.0' or '2.3.1-beta'."
+    )
+
+    def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
+        version = parsed.get("version")
+        if version is None:
+            return []  # QL-014 handles missing version
+        version_str = str(version).strip()
+        if not _SEMVER_RE.match(version_str):
+            return [self._finding(
+                path,
+                f"Version \"{version_str}\" is not a valid semver string.",
+            )]
+        return []
+
+
+_VAGUE_TOOL_RE = re.compile(
+    r"\b(use the tool|call the function|invoke the tool|run the tool|"
+    r"call the tool|execute the function|use the function)\b",
+    re.IGNORECASE,
+)
+
+
+@register
+class VagueToolReferenceRule(Rule):
+    """QL-028 — Vague tool references without a specific name confuse LLM agents."""
+
+    rule_id = "QL-028"
+    severity = Severity.INFO
+    category = Category.CLARITY
+    description = "Vague tool reference without a specific tool name."
+    suggestion_template = (
+        "Replace 'use the tool' / 'call the function' with the specific tool name, "
+        "e.g. 'call search_web(query=...)' or 'use the Bash tool'."
+    )
+
+    def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
+        body = _get_body(parsed)
+        findings = []
+        for i, line in _iter_lines(body):
+            m = _VAGUE_TOOL_RE.search(line)
+            if m:
+                findings.append(self._finding(
+                    path,
+                    f"Vague tool reference \"{m.group()}\" without a specific tool name: "
+                    f"\"{line.strip()[:80]}\"",
+                    line=i,
+                ))
+        return findings
+
+
+# Action verbs that imply capabilities
+_CAPABILITY_VERBS_RE = re.compile(
+    r"\b(executes?|runs?|deploys?|installs?|downloads?|uploads?|"
+    r"writes?\s+to\s+(?:disk|file|filesystem)|"
+    r"modifies?\s+(?:files?|the\s+filesystem)|"
+    r"spawns?\s+(?:a\s+)?(?:process|subprocess|shell))\b",
+    re.IGNORECASE,
+)
+
+_TOOL_CAPABILITY_MAP: dict[str, list[str]] = {
+    "executes": ["Bash", "computer", "execute_code"],
+    "runs": ["Bash", "computer", "execute_code"],
+    "deploys": ["Bash", "computer"],
+    "installs": ["Bash", "computer"],
+    "downloads": ["Bash", "computer", "web_fetch"],
+    "uploads": ["Bash", "computer"],
+}
+
+
+@register
+class DescriptionCapabilityMismatchRule(Rule):
+    """QL-029 — Description implies capabilities not declared in allowed-tools."""
+
+    rule_id = "QL-029"
+    severity = Severity.WARNING
+    category = Category.STRUCTURE
+    description = "Description implies execution capabilities not declared in allowed-tools."
+    suggestion_template = (
+        "Add the required tool to 'allowed-tools', or rewrite the description "
+        "to avoid implying capabilities the skill does not have."
+    )
+
+    def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
+        desc = _get_description(parsed)
+        if not desc:
+            return []
+        allowed = parsed.get("allowed-tools") or parsed.get("allowed_tools") or []
+        if isinstance(allowed, str):
+            allowed = [allowed]
+        allowed_lower = {str(t).lower() for t in allowed}
+
+        findings = []
+        for m in _CAPABILITY_VERBS_RE.finditer(desc):
+            verb = m.group(1).lower().rstrip("s")
+            required = _TOOL_CAPABILITY_MAP.get(verb, ["Bash"])
+            if not any(r.lower() in allowed_lower for r in required):
+                findings.append(self._finding(
+                    path,
+                    f"Description verb \"{m.group()}\" implies execution capability "
+                    f"but {required} not in allowed-tools.",
+                ))
+        return findings
+
+
+_HIGH_RISK_TOOLS: frozenset[str] = frozenset({
+    "bash", "computer", "execute_code", "shell", "terminal",
+    "code_execution", "run_code",
+})
+
+_JUSTIFICATION_KEYWORDS_RE = re.compile(
+    r"\b(automat|CI/CD|pipeline|deploy|build|test|lint|format|"
+    r"script|workflow|devops|infrastructure|provisioning|"
+    r"install|package|compile|run\s+(?:tests?|scripts?|commands?))\b",
+    re.IGNORECASE,
+)
+
+
+@register
+class UnjustifiedHighRiskToolRule(Rule):
+    """QL-030 — High-risk tools (Bash, computer) without justification in description."""
+
+    rule_id = "QL-030"
+    severity = Severity.WARNING
+    category = Category.STRUCTURE
+    description = "High-risk tool (Bash/computer) declared without justification in description."
+    suggestion_template = (
+        "Add a justification keyword to the description explaining why Bash or computer "
+        "access is needed (e.g. 'automates CI/CD pipeline', 'runs build scripts')."
+    )
+
+    def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
+        allowed = parsed.get("allowed-tools") or parsed.get("allowed_tools") or []
+        if isinstance(allowed, str):
+            allowed = [allowed]
+        allowed_lower = {str(t).lower() for t in allowed}
+
+        has_high_risk = any(t in allowed_lower for t in _HIGH_RISK_TOOLS)
+        if not has_high_risk:
+            return []
+
+        desc = _get_description(parsed) + " " + _get_body(parsed)
+        if _JUSTIFICATION_KEYWORDS_RE.search(desc):
+            return []
+
+        return [self._finding(
+            path,
+            "High-risk tool (Bash/computer) declared in allowed-tools but description "
+            "contains no justification keyword (e.g. 'automates', 'CI/CD', 'deploys').",
+        )]
+
+
+_CHANGELOG_HEADING_RE = re.compile(
+    r"^#{1,3}\s+changelog\b", re.IGNORECASE | re.MULTILINE
+)
+
+
+@register
+class MissingChangelogRule(Rule):
+    """QL-031 — Skills without a changelog are harder to audit for changes."""
+
+    rule_id = "QL-031"
+    severity = Severity.INFO
+    category = Category.COMPLETENESS
+    description = "Skill has no changelog section or 'updated' frontmatter field."
+    suggestion_template = (
+        "Add a 'changelog:' list to the YAML front-matter or a '## Changelog' "
+        "section in the Markdown body."
+    )
+
+    def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
+        has_yaml_changelog = bool(parsed.get("changelog") or parsed.get("updated"))
+        has_md_changelog = bool(_CHANGELOG_HEADING_RE.search(content))
+        if not has_yaml_changelog and not has_md_changelog:
+            return [self._finding(
+                path,
+                "No changelog or 'updated' field found. Add a changelog to track changes.",
+            )]
+        return []
+
+
+_INPUTS_HEADING_RE = re.compile(
+    r"^#{1,3}\s+inputs?\b", re.IGNORECASE | re.MULTILINE
+)
+_OUTPUTS_HEADING_RE = re.compile(
+    r"^#{1,3}\s+outputs?\b", re.IGNORECASE | re.MULTILINE
+)
+
+
+@register
+class MissingInputsOutputsRule(Rule):
+    """QL-032 — Skills without Inputs/Outputs sections are harder for agents to invoke."""
+
+    rule_id = "QL-032"
+    severity = Severity.WARNING
+    category = Category.COMPLETENESS
+    description = "Skill has no '## Inputs' or '## Outputs' section."
+    suggestion_template = (
+        "Add '## Inputs' and '## Outputs' sections to document what the skill "
+        "accepts and returns."
+    )
+
+    def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
+        has_inputs = bool(_INPUTS_HEADING_RE.search(content))
+        has_outputs = bool(_OUTPUTS_HEADING_RE.search(content))
+        if not has_inputs and not has_outputs:
+            return [self._finding(
+                path,
+                "No '## Inputs' or '## Outputs' section found. "
+                "Document what the skill accepts and returns.",
+            )]
+        return []
+
+
+_WHEN_TO_USE_HEADING_RE = re.compile(
+    r"^#{1,3}\s+when\s+to\s+use\b", re.IGNORECASE | re.MULTILINE
+)
+
+
+@register
+class MissingWhenToUseRule(Rule):
+    """QL-033 — Skills without a 'When to Use' section are harder to invoke correctly."""
+
+    rule_id = "QL-033"
+    severity = Severity.INFO
+    category = Category.COMPLETENESS
+    description = "Skill has no '## When to Use' section."
+    suggestion_template = (
+        "Add a '## When to Use' section to help LLM agents decide when to invoke "
+        "this skill vs. alternatives."
+    )
+
+    def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
+        if not _WHEN_TO_USE_HEADING_RE.search(content):
+            return [self._finding(
+                path,
+                "No '## When to Use' section found. Add one to guide skill selection.",
+            )]
+        return []
+
+
+# CLI tools that imply prerequisites
+_CLI_TOOL_RE = re.compile(
+    r"\b(az|kubectl|terraform|gh|npm|pip|docker|helm|ansible|"
+    r"gcloud|aws|pulumi|vault|consul)\b"
+)
+
+_PREREQUISITES_HEADING_RE = re.compile(
+    r"^#{1,3}\s+(?:prerequisites?|requirements?|setup|dependencies)\b",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
+@register
+class MissingPrerequisitesRule(Rule):
+    """QL-034 — Skills referencing CLI tools without a Prerequisites section."""
+
+    rule_id = "QL-034"
+    severity = Severity.INFO
+    category = Category.COMPLETENESS
+    description = "Skill references CLI tools without a '## Prerequisites' section."
+    suggestion_template = (
+        "Add a '## Prerequisites' section listing required CLI tools, versions, "
+        "and any authentication setup needed."
+    )
+
+    def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
+        body = _get_body(parsed)
+        cli_matches = _CLI_TOOL_RE.findall(body)
+        if not cli_matches:
+            return []
+
+        has_compat = bool(parsed.get("compatibility") or parsed.get("prerequisites"))
+        has_prereq_heading = bool(_PREREQUISITES_HEADING_RE.search(content))
+
+        if not has_compat and not has_prereq_heading:
+            tools = sorted(set(cli_matches))
+            return [self._finding(
+                path,
+                f"Skill references CLI tools ({', '.join(tools)}) but has no "
+                "'## Prerequisites' or 'compatibility:' section.",
+            )]
+        return []
