@@ -7,14 +7,14 @@ name = "skillscan-lint"
 version = "0.3.1"
 description = "Quality linter for AI agent skill files — readability, clarity, and graph integrity checks"
 readme = "README.md"
-license = { text = "MIT" }
+license = { text = "Apache-2.0" }
 requires-python = ">=3.11"
 authors = [{ name = "SkillScan Contributors" }]
 keywords = ["ai", "agents", "skills", "mcp", "linting", "quality", "readability"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Quality Assurance",
