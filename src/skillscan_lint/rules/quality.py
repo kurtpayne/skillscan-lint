@@ -26,6 +26,7 @@ except ImportError:
 
 from skillscan_lint.models import Category, Severity
 from skillscan_lint.rules.base import Rule, register
+from skillscan_lint.skill_schema import STANDARD_FM_KEYS as _SCHEMA_FM_KEYS, HIGH_RISK_TOOLS as _SCHEMA_HIGH_RISK_TOOLS, TOOL_RISK as _SCHEMA_TOOL_RISK
 
 # ---------------------------------------------------------------------------
 # Weasel word lists
@@ -782,22 +783,9 @@ class ImperativeMoodRule(Rule):
 # M10.9 — Vendor corpus audit rules (QL-026 – QL-034)
 # ---------------------------------------------------------------------------
 
-# Standard frontmatter keys recognised by the Manus skill schema.
-# Unknown keys outside this set are flagged by QL-026.
-_STANDARD_FRONTMATTER_KEYS: frozenset[str] = frozenset({
-    # Identity
-    "name", "version", "description", "author", "license",
-    # Capability declarations
-    "allowed-tools", "allowed_tools", "tools", "capabilities",
-    # Classification
-    "tags", "category", "categories",
-    # Documentation
-    "examples", "usage", "notes", "changelog", "updated",
-    # Compatibility
-    "compatibility", "prerequisites", "requires",
-    # Internal parser keys — not from frontmatter
-    "_body", "_path",
-})
+# Standard frontmatter keys loaded from skill-schema.yaml (shared with skillscan-security).
+# Internal parser keys (_body, _path) are lint-specific and added here.
+_STANDARD_FRONTMATTER_KEYS: frozenset[str] = _SCHEMA_FM_KEYS | frozenset({"_body", "_path"})
 
 # Semver pattern: MAJOR.MINOR.PATCH with optional pre-release / build metadata
 _SEMVER_RE = re.compile(
@@ -948,10 +936,7 @@ class DescriptionCapabilityMismatchRule(Rule):
         return findings
 
 
-_HIGH_RISK_TOOLS: frozenset[str] = frozenset({
-    "bash", "computer", "execute_code", "shell", "terminal",
-    "code_execution", "run_code",
-})
+_HIGH_RISK_TOOLS: frozenset[str] = _SCHEMA_HIGH_RISK_TOOLS  # loaded from skill-schema.yaml
 
 _JUSTIFICATION_KEYWORDS_RE = re.compile(
     r"\b(automat|CI/CD|pipeline|deploy|build|test|lint|format|"

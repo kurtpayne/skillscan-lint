@@ -67,3 +67,4 @@ omit = ["tests/*"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/skillscan_lint"]
+artifacts = ["src/skillscan_lint/data/skill-schema.yaml"]

@@ -32,13 +32,12 @@ except ImportError:
     HAS_NX = False
 
 from skillscan_lint.models import Category, LintFinding, Severity
+from skillscan_lint.skill_schema import GRAPH_EDGE_KEYS as _FRONTMATTER_INVOKE_KEYS  # loaded from skill-schema.yaml
 
 # ---------------------------------------------------------------------------
 # Markdown link extraction — only href values ending in .md
 # ---------------------------------------------------------------------------
-_MD_LINK_RE = re.compile(r"\[(?:[^\]]*)\]\(([^)]+)\)")
-
-_FRONTMATTER_INVOKE_KEYS = ("invoke", "calls", "depends_on", "uses", "requires")
+_MD_LINK_RE = re.compile(r"\[(?:[^\]]*)]\(([^)]+)\)")
 
 # Heading patterns that count as documentation
 _DOC_HEADING_RE = re.compile(
