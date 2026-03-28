@@ -1,6 +1,7 @@
 # skillscan-lint
 
 [![CI](https://github.com/kurtpayne/skillscan-lint/actions/workflows/ci.yml/badge.svg)](https://github.com/kurtpayne/skillscan-lint/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/kurtpayne/skillscan-lint/actions/workflows/codeql.yml/badge.svg)](https://github.com/kurtpayne/skillscan-lint/actions/workflows/codeql.yml)
 [![PyPI](https://img.shields.io/pypi/v/skillscan-lint.svg)](https://pypi.org/project/skillscan-lint/)
 [![Docker Hub](https://img.shields.io/docker/v/kurtpayne/skillscan-lint?label=docker)](https://hub.docker.com/r/kurtpayne/skillscan-lint)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
