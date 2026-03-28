@@ -18,6 +18,7 @@ FAIL_DIR = FIXTURES / "fail"
 # Parser tests
 # ---------------------------------------------------------------------------
 
+
 def test_parse_markdown_with_frontmatter():
     path = PASS_DIR / "good_skill.md"
     content, parsed = parse_skill_file(path)
@@ -46,6 +47,7 @@ def test_parse_yaml(tmp_path):
 # Rule registry tests
 # ---------------------------------------------------------------------------
 
+
 def test_all_rules_registered():
     rules = get_all_rules()
     assert len(rules) >= 15, "Expected at least 15 rules to be registered"
@@ -71,6 +73,7 @@ def test_get_nonexistent_rule():
 # Good skill — should produce no errors
 # ---------------------------------------------------------------------------
 
+
 def test_good_skill_no_errors():
     result = lint_file(PASS_DIR / "good_skill.md")
     assert result.passed, f"Expected no errors, got: {result.errors}"
@@ -79,6 +82,7 @@ def test_good_skill_no_errors():
 # ---------------------------------------------------------------------------
 # QL-011 / QL-012 — Missing required fields
 # ---------------------------------------------------------------------------
+
 
 def test_missing_description_flagged():
     result = lint_file(FAIL_DIR / "missing_fields.md")
@@ -91,6 +95,7 @@ def test_missing_description_flagged():
 # QL-009 — Description too short
 # ---------------------------------------------------------------------------
 
+
 def test_short_description_flagged():
     result = lint_file(FAIL_DIR / "short_description.md")
     rule_ids = [f.rule_id for f in result.findings]
@@ -102,6 +107,7 @@ def test_short_description_flagged():
 # ---------------------------------------------------------------------------
 # QL-004 / QL-006 / QL-015 — Weasel words and TODOs
 # ---------------------------------------------------------------------------
+
 
 def test_weasel_words_flagged():
     result = lint_file(FAIL_DIR / "weasel_skill.md")
@@ -126,6 +132,7 @@ def test_vague_verb_flagged():
 # QL-015 — TODO inline
 # ---------------------------------------------------------------------------
 
+
 def test_todo_inline(tmp_path):
     p = tmp_path / "SKILL.md"
     p.write_text(
@@ -140,6 +147,7 @@ def test_todo_inline(tmp_path):
 # ---------------------------------------------------------------------------
 # QL-013 — Name casing
 # ---------------------------------------------------------------------------
+
 
 def test_bad_name_casing(tmp_path):
     p = tmp_path / "SKILL.md"
@@ -165,6 +173,7 @@ def test_good_snake_case_name(tmp_path):
 # QL-014 — Missing version
 # ---------------------------------------------------------------------------
 
+
 def test_missing_version_flagged(tmp_path):
     p = tmp_path / "SKILL.md"
     p.write_text(
@@ -179,6 +188,7 @@ def test_missing_version_flagged(tmp_path):
 # QL-010 — Description too long
 # ---------------------------------------------------------------------------
 
+
 def test_description_too_long(tmp_path):
     long_desc = " ".join(["word"] * 160)
     p = tmp_path / "SKILL.md"
@@ -190,6 +200,7 @@ def test_description_too_long(tmp_path):
 # ---------------------------------------------------------------------------
 # Graph tests
 # ---------------------------------------------------------------------------
+
 
 def test_graph_cycle_detected(tmp_path):
     # Skills must be SKILL.md files (in subdirs) to be treated as graph nodes
@@ -208,6 +219,7 @@ def test_graph_cycle_detected(tmp_path):
         "invoke: skill_a\n---\n"
     )
     from skillscan_lint.linter import lint_directory
+
     summary = lint_directory(tmp_path, recursive=True, include_graph=True)
     all_ids = [f.rule_id for r in summary.results for f in r.findings]
     assert "GR-001" in all_ids, f"Expected GR-001 (cycle), got: {all_ids}"
@@ -222,6 +234,7 @@ def test_graph_dangling_reference(tmp_path):
         "invoke: nonexistent_skill\n---\n"
     )
     from skillscan_lint.linter import lint_directory
+
     summary = lint_directory(tmp_path, recursive=True, include_graph=True)
     all_ids = [f.rule_id for r in summary.results for f in r.findings]
     assert "GR-002" in all_ids, f"Expected GR-002 (dangling ref), got: {all_ids}"
@@ -230,6 +243,7 @@ def test_graph_dangling_reference(tmp_path):
 # ---------------------------------------------------------------------------
 # QL-016 — Weasel superlatives
 # ---------------------------------------------------------------------------
+
 
 def test_superlative_flagged(tmp_path):
     skill = tmp_path / "skill.md"
@@ -256,6 +270,7 @@ def test_no_superlative_clean(tmp_path):
 # QL-017 — Nominalisations
 # ---------------------------------------------------------------------------
 
+
 def test_nominalisation_flagged(tmp_path):
     skill = tmp_path / "skill.md"
     skill.write_text(
@@ -270,6 +285,7 @@ def test_nominalisation_flagged(tmp_path):
 # ---------------------------------------------------------------------------
 # QL-018 — Redundant phrases
 # ---------------------------------------------------------------------------
+
 
 def test_redundant_phrase_flagged(tmp_path):
     skill = tmp_path / "skill.md"
@@ -286,6 +302,7 @@ def test_redundant_phrase_flagged(tmp_path):
 # QL-019 — Buzzwords
 # ---------------------------------------------------------------------------
 
+
 def test_buzzword_flagged(tmp_path):
     skill = tmp_path / "skill.md"
     skill.write_text(
@@ -300,6 +317,7 @@ def test_buzzword_flagged(tmp_path):
 # ---------------------------------------------------------------------------
 # QL-020 — Vague quantifiers
 # ---------------------------------------------------------------------------
+
 
 def test_vague_quantifier_flagged(tmp_path):
     skill = tmp_path / "skill.md"
@@ -325,6 +343,7 @@ def test_specific_quantifier_clean(tmp_path):
 # ---------------------------------------------------------------------------
 # QL-021 — Undefined acronyms
 # ---------------------------------------------------------------------------
+
 
 def test_undefined_acronym_flagged(tmp_path):
     skill = tmp_path / "skill.md"
@@ -361,6 +380,7 @@ def test_expanded_acronym_not_flagged(tmp_path):
 # QL-022 — Double negatives
 # ---------------------------------------------------------------------------
 
+
 def test_double_negative_flagged(tmp_path):
     skill = tmp_path / "skill.md"
     skill.write_text(
@@ -375,6 +395,7 @@ def test_double_negative_flagged(tmp_path):
 # ---------------------------------------------------------------------------
 # QL-023 — Missing examples
 # ---------------------------------------------------------------------------
+
 
 def test_missing_examples_flagged(tmp_path):
     skill = tmp_path / "skill.md"
@@ -414,6 +435,7 @@ def test_markdown_examples_heading_satisfies_rule(tmp_path):
 # QL-024 — Missing tags
 # ---------------------------------------------------------------------------
 
+
 def test_missing_tags_flagged(tmp_path):
     skill = tmp_path / "skill.md"
     skill.write_text(
@@ -439,6 +461,7 @@ def test_tags_present_no_flag(tmp_path):
 # QL-025 — Imperative mood
 # ---------------------------------------------------------------------------
 
+
 def test_weak_opener_flagged(tmp_path):
     skill = tmp_path / "skill.md"
     skill.write_text(
@@ -463,6 +486,7 @@ def test_imperative_opener_clean(tmp_path):
 # ---------------------------------------------------------------------------
 # QL-026 — Unknown frontmatter keys
 # ---------------------------------------------------------------------------
+
 
 def test_unknown_frontmatter_key_flagged(tmp_path):
     skill = tmp_path / "skill.md"
@@ -491,12 +515,10 @@ def test_standard_frontmatter_keys_no_flag(tmp_path):
 # QL-027 — Invalid version string
 # ---------------------------------------------------------------------------
 
+
 def test_invalid_version_flagged(tmp_path):
     skill = tmp_path / "skill.md"
-    skill.write_text(
-        "---\nname: my_skill\nversion: 'v1.0'\n"
-        "description: Fetches data.\n---\n"
-    )
+    skill.write_text("---\nname: my_skill\nversion: 'v1.0'\ndescription: Fetches data.\n---\n")
     result = lint_file(skill)
     rule_ids = {f.rule_id for f in result.findings}
     assert "QL-027" in rule_ids, f"Expected QL-027 (invalid version), got: {rule_ids}"
@@ -504,10 +526,7 @@ def test_invalid_version_flagged(tmp_path):
 
 def test_valid_semver_no_flag(tmp_path):
     skill = tmp_path / "skill.md"
-    skill.write_text(
-        "---\nname: my_skill\nversion: '1.2.3'\n"
-        "description: Fetches data.\n---\n"
-    )
+    skill.write_text("---\nname: my_skill\nversion: '1.2.3'\ndescription: Fetches data.\n---\n")
     result = lint_file(skill)
     assert not any(f.rule_id == "QL-027" for f in result.findings)
 
@@ -515,8 +534,7 @@ def test_valid_semver_no_flag(tmp_path):
 def test_semver_with_prerelease_no_flag(tmp_path):
     skill = tmp_path / "skill.md"
     skill.write_text(
-        "---\nname: my_skill\nversion: '2.0.0-beta.1'\n"
-        "description: Fetches data.\n---\n"
+        "---\nname: my_skill\nversion: '2.0.0-beta.1'\ndescription: Fetches data.\n---\n"
     )
     result = lint_file(skill)
     assert not any(f.rule_id == "QL-027" for f in result.findings)
@@ -525,6 +543,7 @@ def test_semver_with_prerelease_no_flag(tmp_path):
 # ---------------------------------------------------------------------------
 # QL-028 — Vague tool references
 # ---------------------------------------------------------------------------
+
 
 def test_vague_tool_reference_flagged(tmp_path):
     skill = tmp_path / "skill.md"
@@ -553,6 +572,7 @@ def test_specific_tool_name_no_flag(tmp_path):
 # QL-029 — Description capability mismatch
 # ---------------------------------------------------------------------------
 
+
 def test_capability_mismatch_flagged(tmp_path):
     skill = tmp_path / "skill.md"
     skill.write_text(
@@ -580,6 +600,7 @@ def test_capability_declared_no_flag(tmp_path):
 # QL-030 — Unjustified high-risk tool
 # ---------------------------------------------------------------------------
 
+
 def test_unjustified_bash_flagged(tmp_path):
     skill = tmp_path / "skill.md"
     skill.write_text(
@@ -606,6 +627,7 @@ def test_justified_bash_no_flag(tmp_path):
 # ---------------------------------------------------------------------------
 # QL-031 — Missing changelog
 # ---------------------------------------------------------------------------
+
 
 def test_missing_changelog_flagged(tmp_path):
     skill = tmp_path / "skill.md"
@@ -645,6 +667,7 @@ def test_markdown_changelog_satisfies_rule(tmp_path):
 # QL-032 — Missing Inputs/Outputs sections
 # ---------------------------------------------------------------------------
 
+
 def test_missing_inputs_outputs_flagged(tmp_path):
     skill = tmp_path / "skill.md"
     skill.write_text(
@@ -683,6 +706,7 @@ def test_outputs_section_satisfies_rule(tmp_path):
 # QL-033 — Missing When to Use section
 # ---------------------------------------------------------------------------
 
+
 def test_missing_when_to_use_flagged(tmp_path):
     skill = tmp_path / "skill.md"
     skill.write_text(
@@ -709,6 +733,7 @@ def test_when_to_use_section_no_flag(tmp_path):
 # ---------------------------------------------------------------------------
 # QL-034 — Missing Prerequisites section for CLI tools
 # ---------------------------------------------------------------------------
+
 
 def test_cli_tool_without_prerequisites_flagged(tmp_path):
     skill = tmp_path / "skill.md"

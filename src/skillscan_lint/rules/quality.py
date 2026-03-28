@@ -20,37 +20,69 @@ from typing import Any
 
 try:
     import textstat
+
     HAS_TEXTSTAT = True
 except ImportError:
     HAS_TEXTSTAT = False
 
 from skillscan_lint.models import Category, Severity
 from skillscan_lint.rules.base import Rule, register
-from skillscan_lint.skill_schema import STANDARD_FM_KEYS as _SCHEMA_FM_KEYS, HIGH_RISK_TOOLS as _SCHEMA_HIGH_RISK_TOOLS, TOOL_RISK as _SCHEMA_TOOL_RISK
+from skillscan_lint.skill_schema import HIGH_RISK_TOOLS as _SCHEMA_HIGH_RISK_TOOLS
+from skillscan_lint.skill_schema import STANDARD_FM_KEYS as _SCHEMA_FM_KEYS
 
 # ---------------------------------------------------------------------------
 # Weasel word lists
 # ---------------------------------------------------------------------------
 
 WEASEL_INTENSIFIERS = [
-    r"\bvery\b", r"\bextremely\b", r"\bincredibly\b", r"\bquite\b",
-    r"\brather\b", r"\bfairly\b", r"\bsomewhat\b", r"\bpretty\b",
-    r"\breally\b", r"\bbasically\b", r"\bessentially\b", r"\bactually\b",
-    r"\bliterally\b", r"\btotally\b", r"\babsolutely\b",
+    r"\bvery\b",
+    r"\bextremely\b",
+    r"\bincredibly\b",
+    r"\bquite\b",
+    r"\brather\b",
+    r"\bfairly\b",
+    r"\bsomewhat\b",
+    r"\bpretty\b",
+    r"\breally\b",
+    r"\bbasically\b",
+    r"\bessentially\b",
+    r"\bactually\b",
+    r"\bliterally\b",
+    r"\btotally\b",
+    r"\babsolutely\b",
 ]
 
 WEASEL_HEDGES = [
-    r"\bsomehow\b", r"\bseems?\b", r"\bappears?\b", r"\bapparently\b",
-    r"\bpossibly\b", r"\bperhaps\b", r"\bmaybe\b", r"\bmight\b",
-    r"\bcould\b", r"\bwould\b", r"\bshould\b", r"\bgenerally\b",
-    r"\busually\b", r"\btypically\b", r"\bnormally\b", r"\boften\b",
+    r"\bsomehow\b",
+    r"\bseems?\b",
+    r"\bappears?\b",
+    r"\bapparently\b",
+    r"\bpossibly\b",
+    r"\bperhaps\b",
+    r"\bmaybe\b",
+    r"\bmight\b",
+    r"\bcould\b",
+    r"\bwould\b",
+    r"\bshould\b",
+    r"\bgenerally\b",
+    r"\busually\b",
+    r"\btypically\b",
+    r"\bnormally\b",
+    r"\boften\b",
 ]
 
 WEASEL_FILLERS = [
-    r"\bin order to\b", r"\bdue to the fact that\b", r"\bat this point in time\b",
-    r"\bfor the purpose of\b", r"\bin the event that\b", r"\bit is important to note\b",
-    r"\bit should be noted\b", r"\bplease note\b", r"\bkindly\b",
-    r"\bfeel free to\b", r"\bdon't hesitate\b",
+    r"\bin order to\b",
+    r"\bdue to the fact that\b",
+    r"\bat this point in time\b",
+    r"\bfor the purpose of\b",
+    r"\bin the event that\b",
+    r"\bit is important to note\b",
+    r"\bit should be noted\b",
+    r"\bplease note\b",
+    r"\bkindly\b",
+    r"\bfeel free to\b",
+    r"\bdon't hesitate\b",
 ]
 
 PASSIVE_VOICE_PATTERN = re.compile(
@@ -66,6 +98,7 @@ AMBIGUOUS_PRONOUNS = re.compile(
 # ---------------------------------------------------------------------------
 # Helper: extract text fields from parsed SKILL.md front-matter + body
 # ---------------------------------------------------------------------------
+
 
 def _get_description(parsed: dict[str, Any]) -> str:
     return str(parsed.get("description", ""))
@@ -93,6 +126,7 @@ def _iter_lines(text: str):
 # Readability rules
 # ---------------------------------------------------------------------------
 
+
 @register
 class ReadingLevelRule(Rule):
     rule_id = "QL-001"
@@ -109,11 +143,13 @@ class ReadingLevelRule(Rule):
             return []
         grade = textstat.flesch_kincaid_grade(text)
         if grade > 12:
-            return [self._finding(
-                path,
-                f"Description reading level is grade {grade:.1f} (target ≤ 12). "
-                "Consider simplifying the language.",
-            )]
+            return [
+                self._finding(
+                    path,
+                    f"Description reading level is grade {grade:.1f} (target ≤ 12). "
+                    "Consider simplifying the language.",
+                )
+            ]
         return []
 
 
@@ -135,12 +171,14 @@ class LongSentenceRule(Rule):
         for sentence in sentences:
             words = sentence.split()
             if len(words) > max_words:
-                findings.append(self._finding(
-                    path,
-                    f"Sentence has {len(words)} words (max {max_words}): "
-                    f'"{sentence.strip()[:80]}…"',
-                    suggestion=self.suggestion_template,
-                ))
+                findings.append(
+                    self._finding(
+                        path,
+                        f"Sentence has {len(words)} words (max {max_words}): "
+                        f'"{sentence.strip()[:80]}…"',
+                        suggestion=self.suggestion_template,
+                    )
+                )
         return findings
 
 
@@ -150,24 +188,29 @@ class PassiveVoiceRule(Rule):
     severity = Severity.INFO
     category = Category.READABILITY
     description = "Passive voice reduces clarity in skill descriptions."
-    suggestion_template = "Rewrite using active voice: 'The skill does X' instead of 'X is done by the skill'."
+    suggestion_template = (
+        "Rewrite using active voice: 'The skill does X' instead of 'X is done by the skill'."
+    )
 
     def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
         findings = []
         text = _get_all_text(parsed)
         for i, line in _iter_lines(text):
             if PASSIVE_VOICE_PATTERN.search(line):
-                findings.append(self._finding(
-                    path,
-                    f"Possible passive voice detected: \"{line.strip()[:80]}\"",
-                    line=i,
-                ))
+                findings.append(
+                    self._finding(
+                        path,
+                        f'Possible passive voice detected: "{line.strip()[:80]}"',
+                        line=i,
+                    )
+                )
         return findings
 
 
 # ---------------------------------------------------------------------------
 # Weasel word rules
 # ---------------------------------------------------------------------------
+
 
 @register
 class WeaselIntensifierRule(Rule):
@@ -184,11 +227,13 @@ class WeaselIntensifierRule(Rule):
             for pattern in WEASEL_INTENSIFIERS:
                 m = re.search(pattern, line, re.IGNORECASE)
                 if m:
-                    findings.append(self._finding(
-                        path,
-                        f"Weasel intensifier \"{m.group()}\" found: \"{line.strip()[:80]}\"",
-                        line=i,
-                    ))
+                    findings.append(
+                        self._finding(
+                            path,
+                            f'Weasel intensifier "{m.group()}" found: "{line.strip()[:80]}"',
+                            line=i,
+                        )
+                    )
                     break  # one finding per line
         return findings
 
@@ -198,7 +243,9 @@ class WeaselHedgeRule(Rule):
     rule_id = "QL-005"
     severity = Severity.INFO
     category = Category.WEASEL
-    description = "Hedge words (seems, perhaps, might, typically, etc.) reduce confidence and precision."
+    description = (
+        "Hedge words (seems, perhaps, might, typically, etc.) reduce confidence and precision."
+    )
     suggestion_template = "Replace with a definitive statement or specify the condition explicitly."
 
     def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
@@ -208,11 +255,13 @@ class WeaselHedgeRule(Rule):
             for pattern in WEASEL_HEDGES:
                 m = re.search(pattern, line, re.IGNORECASE)
                 if m:
-                    findings.append(self._finding(
-                        path,
-                        f"Hedge word \"{m.group()}\" found in description: \"{line.strip()[:80]}\"",
-                        line=i,
-                    ))
+                    findings.append(
+                        self._finding(
+                            path,
+                            f'Hedge word "{m.group()}" found in description: "{line.strip()[:80]}"',
+                            line=i,
+                        )
+                    )
                     break
         return findings
 
@@ -232,11 +281,13 @@ class WeaselFillerRule(Rule):
             for pattern in WEASEL_FILLERS:
                 m = re.search(pattern, line, re.IGNORECASE)
                 if m:
-                    findings.append(self._finding(
-                        path,
-                        f"Filler phrase \"{m.group()}\" found: \"{line.strip()[:80]}\"",
-                        line=i,
-                    ))
+                    findings.append(
+                        self._finding(
+                            path,
+                            f'Filler phrase "{m.group()}" found: "{line.strip()[:80]}"',
+                            line=i,
+                        )
+                    )
                     break
         return findings
 
@@ -245,12 +296,15 @@ class WeaselFillerRule(Rule):
 # Ambiguity rules
 # ---------------------------------------------------------------------------
 
+
 @register
 class AmbiguousPronounRule(Rule):
     rule_id = "QL-007"
     severity = Severity.WARNING
     category = Category.CLARITY
-    description = "Ambiguous pronouns (it, they, this, that) without a clear antecedent confuse LLM agents."
+    description = (
+        "Ambiguous pronouns (it, they, this, that) without a clear antecedent confuse LLM agents."
+    )
     suggestion_template = "Replace the pronoun with the explicit noun it refers to."
 
     # Only flag in description/usage, not in body markdown prose
@@ -262,12 +316,14 @@ class AmbiguousPronounRule(Rule):
             words = sentence.split()
             # Flag if sentence starts with an ambiguous pronoun (no prior context)
             if words and AMBIGUOUS_PRONOUNS.match(words[0]):
-                findings.append(self._finding(
-                    path,
-                    f"Sentence starts with ambiguous pronoun \"{words[0]}\": "
-                    f"\"{sentence.strip()[:80]}\"",
-                    suggestion=self.suggestion_template,
-                ))
+                findings.append(
+                    self._finding(
+                        path,
+                        f'Sentence starts with ambiguous pronoun "{words[0]}": '
+                        f'"{sentence.strip()[:80]}"',
+                        suggestion=self.suggestion_template,
+                    )
+                )
         return findings
 
 
@@ -277,7 +333,9 @@ class VagueActionRule(Rule):
     severity = Severity.WARNING
     category = Category.CLARITY
     description = "Vague action verbs (handle, process, manage, deal with) lack specificity."
-    suggestion_template = "Replace with a precise verb: fetch, parse, validate, transform, store, etc."
+    suggestion_template = (
+        "Replace with a precise verb: fetch, parse, validate, transform, store, etc."
+    )
 
     VAGUE_VERBS = re.compile(
         r"\b(handle[sd]?|handles|handling|process(?:es|ed|ing)?|manage[sd]?|manages|managing"
@@ -291,11 +349,13 @@ class VagueActionRule(Rule):
         for i, line in _iter_lines(text):
             m = self.VAGUE_VERBS.search(line)
             if m:
-                findings.append(self._finding(
-                    path,
-                    f"Vague action verb \"{m.group()}\" in description: \"{line.strip()[:80]}\"",
-                    line=i,
-                ))
+                findings.append(
+                    self._finding(
+                        path,
+                        f'Vague action verb "{m.group()}" in description: "{line.strip()[:80]}"',
+                        line=i,
+                    )
+                )
         return findings
 
 
@@ -303,13 +363,16 @@ class VagueActionRule(Rule):
 # Word count / structure rules
 # ---------------------------------------------------------------------------
 
+
 @register
 class DescriptionTooShortRule(Rule):
     rule_id = "QL-009"
     severity = Severity.ERROR
     category = Category.COMPLETENESS
     description = "Description must be at least 10 words to be meaningful to an LLM agent."
-    suggestion_template = "Expand the description to clearly state what the skill does, its inputs, and its outputs."
+    suggestion_template = (
+        "Expand the description to clearly state what the skill does, its inputs, and its outputs."
+    )
 
     MIN_WORDS = 10  # class-level default; overridden by [thresholds] min_description_words
 
@@ -320,11 +383,13 @@ class DescriptionTooShortRule(Rule):
             return [self._finding(path, "Description field is missing or empty.")]
         words = desc.split()
         if len(words) < min_words:
-            return [self._finding(
-                path,
-                f"Description is only {len(words)} words (minimum {min_words}). "
-                "Add more detail about what the skill does.",
-            )]
+            return [
+                self._finding(
+                    path,
+                    f"Description is only {len(words)} words (minimum {min_words}). "
+                    "Add more detail about what the skill does.",
+                )
+            ]
         return []
 
 
@@ -343,11 +408,13 @@ class DescriptionTooLongRule(Rule):
         desc = _get_description(parsed)
         words = desc.split()
         if len(words) > max_words:
-            return [self._finding(
-                path,
-                f"Description is {len(words)} words (maximum {max_words}). "
-                "Consider moving detail to a notes section.",
-            )]
+            return [
+                self._finding(
+                    path,
+                    f"Description is {len(words)} words (maximum {max_words}). "
+                    "Consider moving detail to a notes section.",
+                )
+            ]
         return []
 
 
@@ -391,10 +458,12 @@ class NameCasingRule(Rule):
     def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
         name = str(parsed.get("name", ""))
         if name and not self.VALID_NAME.match(name):
-            return [self._finding(
-                path,
-                f"Skill name \"{name}\" should be snake_case or kebab-case.",
-            )]
+            return [
+                self._finding(
+                    path,
+                    f'Skill name "{name}" should be snake_case or kebab-case.',
+                )
+            ]
         return []
 
 
@@ -408,7 +477,11 @@ class MissingVersionRule(Rule):
 
     def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
         if not parsed.get("version"):
-            return [self._finding(path, "Missing 'version' field. Add a semantic version for reproducibility.")]
+            return [
+                self._finding(
+                    path, "Missing 'version' field. Add a semantic version for reproducibility."
+                )
+            ]
         return []
 
 
@@ -426,12 +499,15 @@ class TodoInDescriptionRule(Rule):
         for i, line in _iter_lines(content):
             m = self.TODO_PATTERN.search(line)
             if m:
-                findings.append(self._finding(
-                    path,
-                    f"Incomplete marker \"{m.group()}\" found: \"{line.strip()[:80]}\"",
-                    line=i,
-                ))
+                findings.append(
+                    self._finding(
+                        path,
+                        f'Incomplete marker "{m.group()}" found: "{line.strip()[:80]}"',
+                        line=i,
+                    )
+                )
         return findings
+
 
 # ---------------------------------------------------------------------------
 # Extended weasel-word rules (QL-016 – QL-020)
@@ -462,11 +538,13 @@ class WeaselSuperlativeRule(Rule):
         for i, line in _iter_lines(text):
             m = WEASEL_SUPERLATIVES.search(line)
             if m:
-                findings.append(self._finding(
-                    path,
-                    f"Unsubstantiated superlative \"{m.group()}\" in: \"{line.strip()[:80]}\"",
-                    line=i,
-                ))
+                findings.append(
+                    self._finding(
+                        path,
+                        f'Unsubstantiated superlative "{m.group()}" in: "{line.strip()[:80]}"',
+                        line=i,
+                    )
+                )
         return findings
 
 
@@ -488,7 +566,9 @@ class NominalisationRule(Rule):
     severity = Severity.INFO
     category = Category.READABILITY
     description = "Nominalisations obscure the action; prefer active verbs."
-    suggestion_template = 'Replace the nominalisation with a direct verb (e.g. "use" instead of "utilization").'
+    suggestion_template = (
+        'Replace the nominalisation with a direct verb (e.g. "use" instead of "utilization").'
+    )
 
     def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
         findings = []
@@ -496,11 +576,13 @@ class NominalisationRule(Rule):
         for i, line in _iter_lines(text):
             m = _NOMINALISATIONS.search(line)
             if m:
-                findings.append(self._finding(
-                    path,
-                    f"Nominalisation \"{m.group()}\" found; prefer an active verb: \"{line.strip()[:80]}\"",
-                    line=i,
-                ))
+                findings.append(
+                    self._finding(
+                        path,
+                        f'Nominalisation "{m.group()}" found; prefer an active verb: "{line.strip()[:80]}"',
+                        line=i,
+                    )
+                )
         return findings
 
 
@@ -535,11 +617,13 @@ class RedundantPhraseRule(Rule):
         for i, line in _iter_lines(text):
             m = _REDUNDANT_PAIRS.search(line)
             if m:
-                findings.append(self._finding(
-                    path,
-                    f"Redundant phrase \"{m.group()}\" in: \"{line.strip()[:80]}\"",
-                    line=i,
-                ))
+                findings.append(
+                    self._finding(
+                        path,
+                        f'Redundant phrase "{m.group()}" in: "{line.strip()[:80]}"',
+                        line=i,
+                    )
+                )
         return findings
 
 
@@ -563,7 +647,9 @@ class BuzzwordRule(Rule):
     severity = Severity.WARNING
     category = Category.WEASEL
     description = "Business buzzword adds no actionable information for an LLM agent."
-    suggestion_template = "Replace the buzzword with a plain-language description of the actual action or outcome."
+    suggestion_template = (
+        "Replace the buzzword with a plain-language description of the actual action or outcome."
+    )
 
     def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
         findings = []
@@ -571,11 +657,13 @@ class BuzzwordRule(Rule):
         for i, line in _iter_lines(text):
             m = _BUZZWORDS.search(line)
             if m:
-                findings.append(self._finding(
-                    path,
-                    f"Buzzword \"{m.group()}\" found: \"{line.strip()[:80]}\"",
-                    line=i,
-                ))
+                findings.append(
+                    self._finding(
+                        path,
+                        f'Buzzword "{m.group()}" found: "{line.strip()[:80]}"',
+                        line=i,
+                    )
+                )
         return findings
 
 
@@ -607,11 +695,13 @@ class VagueQuantifierRule(Rule):
         for i, line in _iter_lines(desc):
             m = _VAGUE_QUANTIFIERS.search(line)
             if m:
-                findings.append(self._finding(
-                    path,
-                    f"Vague quantifier \"{m.group()}\" in description: \"{line.strip()[:80]}\"",
-                    line=i,
-                ))
+                findings.append(
+                    self._finding(
+                        path,
+                        f'Vague quantifier "{m.group()}" in description: "{line.strip()[:80]}"',
+                        line=i,
+                    )
+                )
         return findings
 
 
@@ -621,17 +711,97 @@ class VagueQuantifierRule(Rule):
 
 _ACRONYM_RE = re.compile(r"\b([A-Z]{2,6})\b")
 _KNOWN_ACRONYMS = {
-    "AI", "ML", "LLM", "API", "URL", "HTTP", "HTTPS", "JSON", "YAML",
-    "CSV", "SQL", "PDF", "HTML", "CSS", "JS", "TS", "SDK", "CLI",
-    "CI", "CD", "PR", "UI", "UX", "ID", "UUID", "UTC", "ISO",
-    "REST", "RPC", "GRPC", "JWT", "SSH", "TLS", "SSL", "DNS",
-    "AWS", "GCP", "GCS", "S3", "IAM", "VPC", "EC2", "ECS", "EKS",
-    "CPU", "GPU", "RAM", "SSD", "HDD", "OS", "VM", "K8S", "K8",
-    "NLP", "OCR", "RAG", "RLHF", "DPO", "SFT",
-    "TODO", "FIXME", "NOTE", "WARN", "INFO", "DEBUG", "ERROR",
-    "OK", "EOF", "EOL", "EOD", "EOM", "EOY", "ETA", "SLA", "SLO",
-    "CRUD", "ORM", "MVC", "MVP", "POC", "RFC", "TBD", "WIP",
-    "SARIF", "SBOM", "CVE", "CWE", "OWASP", "NIST", "SOC", "PCI",
+    "AI",
+    "ML",
+    "LLM",
+    "API",
+    "URL",
+    "HTTP",
+    "HTTPS",
+    "JSON",
+    "YAML",
+    "CSV",
+    "SQL",
+    "PDF",
+    "HTML",
+    "CSS",
+    "JS",
+    "TS",
+    "SDK",
+    "CLI",
+    "CI",
+    "CD",
+    "PR",
+    "UI",
+    "UX",
+    "ID",
+    "UUID",
+    "UTC",
+    "ISO",
+    "REST",
+    "RPC",
+    "GRPC",
+    "JWT",
+    "SSH",
+    "TLS",
+    "SSL",
+    "DNS",
+    "AWS",
+    "GCP",
+    "GCS",
+    "S3",
+    "IAM",
+    "VPC",
+    "EC2",
+    "ECS",
+    "EKS",
+    "CPU",
+    "GPU",
+    "RAM",
+    "SSD",
+    "HDD",
+    "OS",
+    "VM",
+    "K8S",
+    "K8",
+    "NLP",
+    "OCR",
+    "RAG",
+    "RLHF",
+    "DPO",
+    "SFT",
+    "TODO",
+    "FIXME",
+    "NOTE",
+    "WARN",
+    "INFO",
+    "DEBUG",
+    "ERROR",
+    "OK",
+    "EOF",
+    "EOL",
+    "EOD",
+    "EOM",
+    "EOY",
+    "ETA",
+    "SLA",
+    "SLO",
+    "CRUD",
+    "ORM",
+    "MVC",
+    "MVP",
+    "POC",
+    "RFC",
+    "TBD",
+    "WIP",
+    "SARIF",
+    "SBOM",
+    "CVE",
+    "CWE",
+    "OWASP",
+    "NIST",
+    "SOC",
+    "PCI",
 }
 _EXPANSION_RE = re.compile(r"\b\w[\w\s]+\s+\(([A-Z]{2,6})\)")
 
@@ -657,11 +827,13 @@ class UndefinedAcronymRule(Rule):
                 if acr in _KNOWN_ACRONYMS or acr in defined or acr in seen:
                     continue
                 seen.add(acr)
-                findings.append(self._finding(
-                    path,
-                    f"Acronym \"{acr}\" used without definition: \"{line.strip()[:80]}\"",
-                    line=i,
-                ))
+                findings.append(
+                    self._finding(
+                        path,
+                        f'Acronym "{acr}" used without definition: "{line.strip()[:80]}"',
+                        line=i,
+                    )
+                )
         return findings
 
 
@@ -690,11 +862,13 @@ class DoubleNegativeRule(Rule):
         for i, line in _iter_lines(text):
             m = _DOUBLE_NEG_RE.search(line)
             if m:
-                findings.append(self._finding(
-                    path,
-                    f"Double negative \"{m.group()}\" in: \"{line.strip()[:80]}\"",
-                    line=i,
-                ))
+                findings.append(
+                    self._finding(
+                        path,
+                        f'Double negative "{m.group()}" in: "{line.strip()[:80]}"',
+                        line=i,
+                    )
+                )
         return findings
 
 
@@ -717,10 +891,12 @@ class MissingExamplesRule(Rule):
         has_yaml_examples = bool(parsed.get("examples"))
         has_md_examples = bool(self._EXAMPLES_HEADING.search(content))
         if not has_yaml_examples and not has_md_examples:
-            return [self._finding(
-                path,
-                "No 'examples' section found. Add examples to help LLM agents invoke this skill correctly.",
-            )]
+            return [
+                self._finding(
+                    path,
+                    "No 'examples' section found. Add examples to help LLM agents invoke this skill correctly.",
+                )
+            ]
         return []
 
 
@@ -737,10 +913,12 @@ class MissingTagsRule(Rule):
     def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
         tags = parsed.get("tags")
         if not tags or (isinstance(tags, (list, tuple)) and len(tags) == 0):
-            return [self._finding(
-                path,
-                "No 'tags' field found. Add tags to improve discoverability.",
-            )]
+            return [
+                self._finding(
+                    path,
+                    "No 'tags' field found. Add tags to improve discoverability.",
+                )
+            ]
         return []
 
 
@@ -771,11 +949,13 @@ class ImperativeMoodRule(Rule):
             return []
         first_sentence = re.split(r"[.!?]", desc)[0].strip()
         if _IMPERATIVE_STARTERS.match(first_sentence):
-            return [self._finding(
-                path,
-                f"Description starts with a weak opener: \"{first_sentence[:80]}\". "
-                "Use an imperative verb instead.",
-            )]
+            return [
+                self._finding(
+                    path,
+                    f'Description starts with a weak opener: "{first_sentence[:80]}". '
+                    "Use an imperative verb instead.",
+                )
+            ]
         return []
 
 
@@ -788,9 +968,7 @@ class ImperativeMoodRule(Rule):
 _STANDARD_FRONTMATTER_KEYS: frozenset[str] = _SCHEMA_FM_KEYS | frozenset({"_body", "_path"})
 
 # Semver pattern: MAJOR.MINOR.PATCH with optional pre-release / build metadata
-_SEMVER_RE = re.compile(
-    r"^\d+\.\d+(\.\d+)?([.-][a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?$"
-)
+_SEMVER_RE = re.compile(r"^\d+\.\d+(\.\d+)?([.-][a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?$")
 
 
 @register
@@ -815,10 +993,12 @@ class UnknownFrontmatterKeyRule(Rule):
             normalised = key.replace("-", "_").lower()
             if normalised in {k.replace("-", "_").lower() for k in _STANDARD_FRONTMATTER_KEYS}:
                 continue
-            findings.append(self._finding(
-                path,
-                f"Unknown frontmatter key \"{key}\"; not in the standard skill schema.",
-            ))
+            findings.append(
+                self._finding(
+                    path,
+                    f'Unknown frontmatter key "{key}"; not in the standard skill schema.',
+                )
+            )
         return findings
 
 
@@ -830,9 +1010,7 @@ class InvalidVersionRule(Rule):
     severity = Severity.WARNING
     category = Category.STRUCTURE
     description = "Version field is not a valid semver string (MAJOR.MINOR.PATCH)."
-    suggestion_template = (
-        "Use a semver version string, e.g. '1.0.0' or '2.3.1-beta'."
-    )
+    suggestion_template = "Use a semver version string, e.g. '1.0.0' or '2.3.1-beta'."
 
     def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
         version = parsed.get("version")
@@ -840,10 +1018,12 @@ class InvalidVersionRule(Rule):
             return []  # QL-014 handles missing version
         version_str = str(version).strip()
         if not _SEMVER_RE.match(version_str):
-            return [self._finding(
-                path,
-                f"Version \"{version_str}\" is not a valid semver string.",
-            )]
+            return [
+                self._finding(
+                    path,
+                    f'Version "{version_str}" is not a valid semver string.',
+                )
+            ]
         return []
 
 
@@ -873,12 +1053,14 @@ class VagueToolReferenceRule(Rule):
         for i, line in _iter_lines(body):
             m = _VAGUE_TOOL_RE.search(line)
             if m:
-                findings.append(self._finding(
-                    path,
-                    f"Vague tool reference \"{m.group()}\" without a specific tool name: "
-                    f"\"{line.strip()[:80]}\"",
-                    line=i,
-                ))
+                findings.append(
+                    self._finding(
+                        path,
+                        f'Vague tool reference "{m.group()}" without a specific tool name: '
+                        f'"{line.strip()[:80]}"',
+                        line=i,
+                    )
+                )
         return findings
 
 
@@ -928,11 +1110,13 @@ class DescriptionCapabilityMismatchRule(Rule):
             verb = m.group(1).lower().rstrip("s")
             required = _TOOL_CAPABILITY_MAP.get(verb, ["Bash"])
             if not any(r.lower() in allowed_lower for r in required):
-                findings.append(self._finding(
-                    path,
-                    f"Description verb \"{m.group()}\" implies execution capability "
-                    f"but {required} not in allowed-tools.",
-                ))
+                findings.append(
+                    self._finding(
+                        path,
+                        f'Description verb "{m.group()}" implies execution capability '
+                        f"but {required} not in allowed-tools.",
+                    )
+                )
         return findings
 
 
@@ -973,16 +1157,16 @@ class UnjustifiedHighRiskToolRule(Rule):
         if _JUSTIFICATION_KEYWORDS_RE.search(desc):
             return []
 
-        return [self._finding(
-            path,
-            "High-risk tool (Bash/computer) declared in allowed-tools but description "
-            "contains no justification keyword (e.g. 'automates', 'CI/CD', 'deploys').",
-        )]
+        return [
+            self._finding(
+                path,
+                "High-risk tool (Bash/computer) declared in allowed-tools but description "
+                "contains no justification keyword (e.g. 'automates', 'CI/CD', 'deploys').",
+            )
+        ]
 
 
-_CHANGELOG_HEADING_RE = re.compile(
-    r"^#{1,3}\s+changelog\b", re.IGNORECASE | re.MULTILINE
-)
+_CHANGELOG_HEADING_RE = re.compile(r"^#{1,3}\s+changelog\b", re.IGNORECASE | re.MULTILINE)
 
 
 @register
@@ -1002,19 +1186,17 @@ class MissingChangelogRule(Rule):
         has_yaml_changelog = bool(parsed.get("changelog") or parsed.get("updated"))
         has_md_changelog = bool(_CHANGELOG_HEADING_RE.search(content))
         if not has_yaml_changelog and not has_md_changelog:
-            return [self._finding(
-                path,
-                "No changelog or 'updated' field found. Add a changelog to track changes.",
-            )]
+            return [
+                self._finding(
+                    path,
+                    "No changelog or 'updated' field found. Add a changelog to track changes.",
+                )
+            ]
         return []
 
 
-_INPUTS_HEADING_RE = re.compile(
-    r"^#{1,3}\s+inputs?\b", re.IGNORECASE | re.MULTILINE
-)
-_OUTPUTS_HEADING_RE = re.compile(
-    r"^#{1,3}\s+outputs?\b", re.IGNORECASE | re.MULTILINE
-)
+_INPUTS_HEADING_RE = re.compile(r"^#{1,3}\s+inputs?\b", re.IGNORECASE | re.MULTILINE)
+_OUTPUTS_HEADING_RE = re.compile(r"^#{1,3}\s+outputs?\b", re.IGNORECASE | re.MULTILINE)
 
 
 @register
@@ -1026,25 +1208,24 @@ class MissingInputsOutputsRule(Rule):
     category = Category.COMPLETENESS
     description = "Skill has no '## Inputs' or '## Outputs' section."
     suggestion_template = (
-        "Add '## Inputs' and '## Outputs' sections to document what the skill "
-        "accepts and returns."
+        "Add '## Inputs' and '## Outputs' sections to document what the skill accepts and returns."
     )
 
     def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
         has_inputs = bool(_INPUTS_HEADING_RE.search(content))
         has_outputs = bool(_OUTPUTS_HEADING_RE.search(content))
         if not has_inputs and not has_outputs:
-            return [self._finding(
-                path,
-                "No '## Inputs' or '## Outputs' section found. "
-                "Document what the skill accepts and returns.",
-            )]
+            return [
+                self._finding(
+                    path,
+                    "No '## Inputs' or '## Outputs' section found. "
+                    "Document what the skill accepts and returns.",
+                )
+            ]
         return []
 
 
-_WHEN_TO_USE_HEADING_RE = re.compile(
-    r"^#{1,3}\s+when\s+to\s+use\b", re.IGNORECASE | re.MULTILINE
-)
+_WHEN_TO_USE_HEADING_RE = re.compile(r"^#{1,3}\s+when\s+to\s+use\b", re.IGNORECASE | re.MULTILINE)
 
 
 @register
@@ -1062,10 +1243,12 @@ class MissingWhenToUseRule(Rule):
 
     def check(self, path: Path, content: str, parsed: dict[str, Any]) -> list:
         if not _WHEN_TO_USE_HEADING_RE.search(content):
-            return [self._finding(
-                path,
-                "No '## When to Use' section found. Add one to guide skill selection.",
-            )]
+            return [
+                self._finding(
+                    path,
+                    "No '## When to Use' section found. Add one to guide skill selection.",
+                )
+            ]
         return []
 
 
@@ -1105,9 +1288,11 @@ class MissingPrerequisitesRule(Rule):
 
         if not has_compat and not has_prereq_heading:
             tools = sorted(set(cli_matches))
-            return [self._finding(
-                path,
-                f"Skill references CLI tools ({', '.join(tools)}) but has no "
-                "'## Prerequisites' or 'compatibility:' section.",
-            )]
+            return [
+                self._finding(
+                    path,
+                    f"Skill references CLI tools ({', '.join(tools)}) but has no "
+                    "'## Prerequisites' or 'compatibility:' section.",
+                )
+            ]
         return []

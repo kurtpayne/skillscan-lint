@@ -85,6 +85,7 @@ def scan_cmd(
 
     if path.is_file():
         from skillscan_lint.linter import lint_file
+
         result = lint_file(
             path,
             skip_ids=skip_set,

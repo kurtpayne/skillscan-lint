@@ -251,8 +251,7 @@ def test_cli_sarif_flag(tmp_path):
     # Write a minimal skill file with a known issue
     skill = tmp_path / "SKILL.md"
     skill.write_text(
-        "---\nname: test_skill\nversion: '1.0.0'\n---\n\n"
-        "This skill does stuff and things.\n"
+        "---\nname: test_skill\nversion: '1.0.0'\n---\n\nThis skill does stuff and things.\n"
     )
 
     runner = CliRunner()

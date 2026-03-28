@@ -43,6 +43,7 @@ def lint_file(
             # Apply severity overrides from config
             if rule.rule_id in severity_overrides:
                 from skillscan_lint.models import Severity
+
                 new_sev = Severity(severity_overrides[rule.rule_id])
                 rule_findings = [
                     LintFinding(
@@ -86,7 +87,13 @@ def lint_directory(
     skipped = 0
 
     for path in skill_paths:
-        result = lint_file(path, rules=rules, skip_ids=skip_ids, severity_overrides=severity_overrides, thresholds=thresholds)
+        result = lint_file(
+            path,
+            rules=rules,
+            skip_ids=skip_ids,
+            severity_overrides=severity_overrides,
+            thresholds=thresholds,
+        )
         results.append(result)
         if result.skipped:
             skipped += 1
@@ -124,7 +131,4 @@ def _collect_skill_files(root: Path, recursive: bool) -> list[Path]:
         return [root] if is_skill_file(root) else []
 
     pattern = "**/*" if recursive else "*"
-    return sorted(
-        p for p in root.glob(pattern)
-        if p.is_file() and is_skill_file(p)
-    )
+    return sorted(p for p in root.glob(pattern) if p.is_file() and is_skill_file(p))

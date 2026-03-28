@@ -19,6 +19,7 @@ Edge resolution — in order of reliability:
 3. Prose pattern matching is intentionally NOT used — it generates too
    many false positives.  Only explicit declarations and file links count.
 """
+
 from __future__ import annotations
 
 import re
@@ -27,12 +28,15 @@ from typing import Any
 
 try:
     import networkx as nx
+
     HAS_NX = True
 except ImportError:
     HAS_NX = False
 
 from skillscan_lint.models import Category, LintFinding, Severity
-from skillscan_lint.skill_schema import GRAPH_EDGE_KEYS as _FRONTMATTER_INVOKE_KEYS  # loaded from skill-schema.yaml
+from skillscan_lint.skill_schema import (
+    GRAPH_EDGE_KEYS as _FRONTMATTER_INVOKE_KEYS,  # loaded from skill-schema.yaml
+)
 
 # ---------------------------------------------------------------------------
 # Markdown link extraction — only href values ending in .md
@@ -182,8 +186,7 @@ def build_skill_graph(
     """
     if not HAS_NX:
         raise ImportError(
-            "networkx is required for graph analysis. "
-            "Install with: pip install networkx"
+            "networkx is required for graph analysis. Install with: pip install networkx"
         )
 
     g: nx.DiGraph = nx.DiGraph()
@@ -232,13 +235,11 @@ def analyze_graph(
 
     # Rebuild path_index for GR-006 (maps resolved path str -> canonical skill name)
     path_index: dict[str, str] = {
-        str(path.resolve()): _skill_name(path, parsed)
-        for path, _content, parsed in skill_files
+        str(path.resolve()): _skill_name(path, parsed) for path, _content, parsed in skill_files
     }
 
     parsed_by_name: dict[str, dict[str, Any]] = {
-        _skill_name(p, parsed): parsed
-        for p, _content, parsed in skill_files
+        _skill_name(p, parsed): parsed for p, _content, parsed in skill_files
     }
 
     findings: list[LintFinding] = []
@@ -251,28 +252,32 @@ def analyze_graph(
     for cycle in cycles:
         cycle_str = " -> ".join(cycle + [cycle[0]])
         path = name_to_path.get(cycle[0], Path(cycle[0]))
-        findings.append(LintFinding(
-            rule_id="GR-001",
-            severity=Severity.ERROR,
-            category=Category.GRAPH,
-            message=f"Recursive invocation cycle detected: {cycle_str}",
-            path=path,
-            suggestion="Break the cycle by introducing a conditional or removing the back-edge.",
-        ))
+        findings.append(
+            LintFinding(
+                rule_id="GR-001",
+                severity=Severity.ERROR,
+                category=Category.GRAPH,
+                message=f"Recursive invocation cycle detected: {cycle_str}",
+                path=path,
+                suggestion="Break the cycle by introducing a conditional or removing the back-edge.",
+            )
+        )
 
     # --- GR-002: Dangling reference detection ---
     known_skills = set(name_to_path.keys())
     for src, dst in g.edges():
         if dst not in known_skills:
             path = name_to_path.get(src, Path(src))
-            findings.append(LintFinding(
-                rule_id="GR-002",
-                severity=Severity.ERROR,
-                category=Category.GRAPH,
-                message=f'Skill "{src}" references "{dst}" which does not exist in the scanned set.',
-                path=path,
-                suggestion=f'Create a skill named "{dst}" or correct the reference.',
-            ))
+            findings.append(
+                LintFinding(
+                    rule_id="GR-002",
+                    severity=Severity.ERROR,
+                    category=Category.GRAPH,
+                    message=f'Skill "{src}" references "{dst}" which does not exist in the scanned set.',
+                    path=path,
+                    suggestion=f'Create a skill named "{dst}" or correct the reference.',
+                )
+            )
 
     # --- GR-003: Orphan detection ---
     all_targets = {dst for _, dst in g.edges()}
@@ -281,18 +286,20 @@ def analyze_graph(
             skill_data = parsed_by_name.get(name, {})
             is_entry = skill_data.get("entry_point", False) or skill_data.get("entrypoint", False)
             if not is_entry and g.out_degree(name) > 0:
-                findings.append(LintFinding(
-                    rule_id="GR-003",
-                    severity=Severity.INFO,
-                    category=Category.GRAPH,
-                    message=(
-                        f'Skill "{name}" references other skills but is never '
-                        "referenced itself. Consider marking it as "
-                        "'entry_point: true' if intentional."
-                    ),
-                    path=path,
-                    suggestion="Add 'entry_point: true' to the front-matter if this is a top-level skill.",
-                ))
+                findings.append(
+                    LintFinding(
+                        rule_id="GR-003",
+                        severity=Severity.INFO,
+                        category=Category.GRAPH,
+                        message=(
+                            f'Skill "{name}" references other skills but is never '
+                            "referenced itself. Consider marking it as "
+                            "'entry_point: true' if intentional."
+                        ),
+                        path=path,
+                        suggestion="Add 'entry_point: true' to the front-matter if this is a top-level skill.",
+                    )
+                )
 
     # --- GR-004: Hub detection ---
     HUB_THRESHOLD = 5
@@ -300,17 +307,19 @@ def analyze_graph(
         in_deg = g.in_degree(name)
         if in_deg >= HUB_THRESHOLD:
             path = name_to_path.get(name, Path(name))
-            findings.append(LintFinding(
-                rule_id="GR-004",
-                severity=Severity.WARNING,
-                category=Category.GRAPH,
-                message=(
-                    f'Skill "{name}" is referenced by {in_deg} other skills — '
-                    "high coupling creates a single point of failure."
-                ),
-                path=path,
-                suggestion="Consider splitting this skill or introducing an abstraction layer.",
-            ))
+            findings.append(
+                LintFinding(
+                    rule_id="GR-004",
+                    severity=Severity.WARNING,
+                    category=Category.GRAPH,
+                    message=(
+                        f'Skill "{name}" is referenced by {in_deg} other skills — '
+                        "high coupling creates a single point of failure."
+                    ),
+                    path=path,
+                    suggestion="Consider splitting this skill or introducing an abstraction layer.",
+                )
+            )
 
     # --- GR-005: Undocumented dependency ---
     for name in g.nodes():
@@ -318,20 +327,22 @@ def analyze_graph(
             parsed = parsed_by_name.get(name, {})
             if not _has_docs(parsed):
                 path = name_to_path.get(name, Path(name))
-                findings.append(LintFinding(
-                    rule_id="GR-005",
-                    severity=Severity.WARNING,
-                    category=Category.GRAPH,
-                    message=(
-                        f'Skill "{name}" is referenced by other skills but has '
-                        "no Usage, Overview, or Description section."
-                    ),
-                    path=path,
-                    suggestion=(
-                        "Add a ## Usage or ## Overview section so callers "
-                        "understand how to invoke this skill."
-                    ),
-                ))
+                findings.append(
+                    LintFinding(
+                        rule_id="GR-005",
+                        severity=Severity.WARNING,
+                        category=Category.GRAPH,
+                        message=(
+                            f'Skill "{name}" is referenced by other skills but has '
+                            "no Usage, Overview, or Description section."
+                        ),
+                        path=path,
+                        suggestion=(
+                            "Add a ## Usage or ## Overview section so callers "
+                            "understand how to invoke this skill."
+                        ),
+                    )
+                )
 
     # --- GR-006: Broken intra-skill file references ---
     # These are Markdown links within a single skill's files that point to
@@ -357,19 +368,21 @@ def analyze_graph(
             if target_name is not None:
                 continue  # cross-skill ref — GR-002 handles it
             if not target.exists():
-                findings.append(LintFinding(
-                    rule_id="GR-006",
-                    severity=Severity.WARNING,
-                    category=Category.GRAPH,
-                    message=(
-                        f'Broken file reference in "{_skill_name(path, parsed)}": '
-                        f'"{href}" does not exist.'
-                    ),
-                    path=path,
-                    suggestion=(
-                        f'Create the file at "{href}" relative to this skill, '
-                        "or remove the link."
-                    ),
-                ))
+                findings.append(
+                    LintFinding(
+                        rule_id="GR-006",
+                        severity=Severity.WARNING,
+                        category=Category.GRAPH,
+                        message=(
+                            f'Broken file reference in "{_skill_name(path, parsed)}": '
+                            f'"{href}" does not exist.'
+                        ),
+                        path=path,
+                        suggestion=(
+                            f'Create the file at "{href}" relative to this skill, '
+                            "or remove the link."
+                        ),
+                    )
+                )
 
     return findings

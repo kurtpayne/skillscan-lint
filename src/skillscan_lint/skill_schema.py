@@ -27,6 +27,7 @@ Usage::
         HIGH_RISK_TOOLS,
     )
 """
+
 from __future__ import annotations
 
 from functools import lru_cache
@@ -35,16 +36,17 @@ from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 
-
 # ---------------------------------------------------------------------------
 # Schema loader — tries skillscan-security first, falls back to own bundle
 # ---------------------------------------------------------------------------
+
 
 def _load_schema() -> dict[str, Any]:
     """Load skill-schema.yaml, preferring the skillscan-security copy."""
     # Strategy 1: use skillscan-security's skill_schema module directly
     try:
         from skillscan.skill_schema import _load_schema as _sec_load  # type: ignore[import]
+
         return _sec_load()
     except ImportError:
         pass
@@ -52,6 +54,7 @@ def _load_schema() -> dict[str, Any]:
     # Strategy 2: use importlib.resources to read skillscan-security's data file
     try:
         from importlib.resources import files as _files
+
         schema_bytes = _files("skillscan.data").joinpath("skill-schema.yaml").read_bytes()
         return yaml.safe_load(schema_bytes)
     except (ImportError, FileNotFoundError, ModuleNotFoundError):
@@ -60,6 +63,7 @@ def _load_schema() -> dict[str, Any]:
     # Strategy 3: fall back to this package's own bundled copy
     try:
         from importlib.resources import files as _files
+
         schema_bytes = _files("skillscan_lint.data").joinpath("skill-schema.yaml").read_bytes()
         return yaml.safe_load(schema_bytes)
     except (ImportError, FileNotFoundError):
@@ -88,6 +92,7 @@ def _schema() -> dict[str, Any]:
 # Public constants
 # ---------------------------------------------------------------------------
 
+
 @lru_cache(maxsize=1)
 def get_standard_fm_keys() -> frozenset[str]:
     return frozenset(_schema().get("standard_frontmatter_keys", []))
@@ -110,7 +115,7 @@ def get_tool_risk() -> dict[str, int]:
     tier_map = {"high": 3, "medium": 2, "low": 1}
     for tier_name, tools in tiers.items():
         tier_value = tier_map.get(tier_name, 1)
-        for tool in (tools or []):
+        for tool in tools or []:
             result[tool.lower()] = tier_value
     return result
 

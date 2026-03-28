@@ -184,9 +184,7 @@ def _parse_toml(path: Path) -> LintConfig:
         if isinstance(overrides_raw, dict):
             valid_severities = {"error", "warning", "info"}
             cfg.rules.overrides = {
-                str(k): str(v)
-                for k, v in overrides_raw.items()
-                if str(v) in valid_severities
+                str(k): str(v) for k, v in overrides_raw.items() if str(v) in valid_severities
             }
 
     # [thresholds]

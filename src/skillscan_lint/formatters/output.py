@@ -9,6 +9,7 @@ from skillscan_lint.models import ScanSummary, Severity
 
 try:
     from rich.console import Console
+
     HAS_RICH = True
 except ImportError:
     HAS_RICH = False
@@ -32,9 +33,7 @@ def format_compact(summary: ScanSummary) -> str:
             continue
         for f in result.findings:
             loc = f":{f.line}" if f.line else ""
-            lines.append(
-                f"{f.severity.value.upper()} {f.path}{loc} [{f.rule_id}] {f.message}"
-            )
+            lines.append(f"{f.severity.value.upper()} {f.path}{loc} [{f.rule_id}] {f.message}")
     lines.append("")
     lines.append(
         f"{'PASS' if summary.passed else 'FAIL'} — "
@@ -59,20 +58,24 @@ def format_json(summary: ScanSummary) -> str:
     for result in summary.results:
         findings: list[dict[str, object]] = []
         for f in result.findings:
-            findings.append({
-                "rule_id": f.rule_id,
-                "severity": f.severity.value,
-                "category": f.category.value,
-                "message": f.message,
-                "line": f.line,
-                "suggestion": f.suggestion,
-            })
-        results.append({
-            "path": str(result.path),
-            "passed": result.passed,
-            "skipped": result.skipped,
-            "findings": findings,
-        })
+            findings.append(
+                {
+                    "rule_id": f.rule_id,
+                    "severity": f.severity.value,
+                    "category": f.category.value,
+                    "message": f.message,
+                    "line": f.line,
+                    "suggestion": f.suggestion,
+                }
+            )
+        results.append(
+            {
+                "path": str(result.path),
+                "passed": result.passed,
+                "skipped": result.skipped,
+                "findings": findings,
+            }
+        )
     return json.dumps(output, indent=2)
 
 
