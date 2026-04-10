@@ -206,7 +206,7 @@ def _parse_toml(path: Path) -> LintConfig:
     # [output]
     output_raw = raw.get("output", {})
     if isinstance(output_raw, dict):
-        if "format" in output_raw and output_raw["format"] in {"rich", "compact", "json"}:
+        if "format" in output_raw and output_raw["format"] in {"rich", "compact", "json", "sarif"}:
             cfg.output.format = str(output_raw["format"])
         if "fail_on" in output_raw and output_raw["fail_on"] in {"error", "warning", "never"}:
             cfg.output.fail_on = str(output_raw["fail_on"])

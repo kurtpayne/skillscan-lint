@@ -1,6 +1,11 @@
 """skillscan-lint — Quality linter for AI agent skill files."""
 
-__version__ = "0.1.0"
+from importlib.metadata import PackageNotFoundError, version
+
+try:
+    __version__ = version("skillscan-lint")
+except PackageNotFoundError:
+    __version__ = "0.3.1"
 
 from skillscan_lint.linter import lint_directory, lint_file
 from skillscan_lint.models import LintFinding, LintResult, ScanSummary, Severity

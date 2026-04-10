@@ -185,9 +185,13 @@ def build_skill_graph(
     Returns (graph, name_to_path).
     """
     if not HAS_NX:
-        raise ImportError(
-            "networkx is required for graph analysis. Install with: pip install networkx"
+        import logging as _logging
+
+        _logging.getLogger(__name__).warning(
+            "networkx is not installed — skipping graph analysis. "
+            "Install with: pip install networkx"
         )
+        return None, {}  # type: ignore[return-value]
 
     g: nx.DiGraph = nx.DiGraph()
     name_to_path: dict[str, Path] = {}
