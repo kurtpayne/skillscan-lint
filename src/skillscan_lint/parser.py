@@ -29,6 +29,8 @@ def parse_skill_file(path: Path) -> tuple[str, dict[str, Any]]:
     """
     try:
         content = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        raise ParseError(f"Skipping binary/non-UTF-8 file: {path}")
     except OSError as e:
         raise ParseError(f"Cannot read {path}: {e}") from e
 

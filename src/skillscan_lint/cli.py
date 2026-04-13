@@ -13,13 +13,13 @@ from skillscan_lint.linter import lint_directory
 from skillscan_lint.models import ScanSummary
 
 
-@click.group()
+@click.group(context_settings=dict(help_option_names=["-h", "--help"]))
 @click.version_option(package_name="skillscan-lint")
 def main() -> None:
     """skillscan-lint — Quality linter for AI agent skill files."""
 
 
-@main.command("scan")
+@main.command("scan", context_settings=dict(help_option_names=["-h", "--help"]))
 @click.argument("path", type=click.Path(exists=True, path_type=Path))
 @click.option(
     "--format",
@@ -84,6 +84,10 @@ def scan_cmd(
     skip_set = set(skip_ids) | set(cfg.rules.disable)
 
     if path.is_file():
+        if path.suffix.lower() not in (".md", ".yaml", ".yml"):
+            click.echo(f"Skipping non-Markdown file: {path}", err=True)
+            sys.exit(0)
+
         from skillscan_lint.linter import lint_file
 
         result = lint_file(
@@ -110,11 +114,11 @@ def scan_cmd(
     if effective_format == "json":
         click.echo(format_json(summary))
     elif effective_format == "compact":
-        click.echo(format_compact(summary))
+        click.echo(format_compact(summary, fail_on=effective_fail_on))
     elif effective_format == "sarif":
         click.echo(format_sarif(summary))
     else:
-        print_rich(summary)
+        print_rich(summary, fail_on=effective_fail_on)
 
     # Exit code logic
     if effective_fail_on == "never":
@@ -129,7 +133,7 @@ def scan_cmd(
         sys.exit(0)
 
 
-@main.command("config")
+@main.command("config", context_settings=dict(help_option_names=["-h", "--help"]))
 @click.option(
     "--config",
     "config_path",
@@ -164,7 +168,7 @@ def config_cmd(config_path: Path | None) -> None:
     click.echo(_json.dumps(data, indent=2))
 
 
-@main.command("rules")
+@main.command("rules", context_settings=dict(help_option_names=["-h", "--help"]))
 @click.option(
     "--format",
     "output_format",

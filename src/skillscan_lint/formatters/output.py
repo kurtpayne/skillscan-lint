@@ -24,7 +24,17 @@ _SARIF_LEVEL: dict[Severity, str] = {
 }
 
 
-def format_compact(summary: ScanSummary) -> str:
+def _verdict(summary: ScanSummary, fail_on: str = "error") -> bool:
+    """Return True if the scan should be considered passing given fail_on threshold."""
+    if fail_on == "never":
+        return True
+    if fail_on == "warning":
+        return summary.total_errors == 0 and summary.total_warnings == 0
+    # default: "error"
+    return summary.passed
+
+
+def format_compact(summary: ScanSummary, fail_on: str = "error") -> str:
     """One line per finding, similar to eslint compact output."""
     lines = []
     for result in summary.results:
@@ -35,8 +45,9 @@ def format_compact(summary: ScanSummary) -> str:
             loc = f":{f.line}" if f.line else ""
             lines.append(f"{f.severity.value.upper()} {f.path}{loc} [{f.rule_id}] {f.message}")
     lines.append("")
+    passed = _verdict(summary, fail_on)
     lines.append(
-        f"{'PASS' if summary.passed else 'FAIL'} — "
+        f"{'PASS' if passed else 'FAIL'} — "
         f"{summary.total_files} files, "
         f"{summary.total_errors} errors, "
         f"{summary.total_warnings} warnings"
@@ -167,10 +178,12 @@ def format_sarif(summary: ScanSummary, version: str = "0.3.1") -> str:
     return json.dumps(sarif_log, indent=2)
 
 
-def print_rich(summary: ScanSummary, console: Console | None = None) -> None:
+def print_rich(
+    summary: ScanSummary, console: Console | None = None, fail_on: str = "error"
+) -> None:
     """Rich terminal output with color and tables."""
     if not HAS_RICH:
-        print(format_compact(summary))
+        print(format_compact(summary, fail_on=fail_on))
         return
 
     if console is None:
@@ -203,7 +216,8 @@ def print_rich(summary: ScanSummary, console: Console | None = None) -> None:
 
     # Summary bar
     console.print()
-    if summary.passed:
+    passed = _verdict(summary, fail_on)
+    if passed:
         console.print(
             f"[bold green]✓ PASS[/bold green] — "
             f"{summary.total_files} files scanned, "
