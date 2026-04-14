@@ -222,6 +222,49 @@ def build_skill_graph(
 build_graph = build_skill_graph
 
 
+# ---------------------------------------------------------------------------
+# Graph rule definitions (for the ``rules`` command listing)
+# ---------------------------------------------------------------------------
+GRAPH_RULES: list[dict[str, str]] = [
+    {
+        "rule_id": "GR-001",
+        "severity": Severity.ERROR.value,
+        "category": Category.GRAPH.value,
+        "description": "Recursive invocation cycle detected in the skill graph.",
+    },
+    {
+        "rule_id": "GR-002",
+        "severity": Severity.ERROR.value,
+        "category": Category.GRAPH.value,
+        "description": "Dangling reference — skill invokes a skill that does not exist.",
+    },
+    {
+        "rule_id": "GR-003",
+        "severity": Severity.INFO.value,
+        "category": Category.GRAPH.value,
+        "description": "Orphaned entry-point — skill invokes others but is never invoked itself.",
+    },
+    {
+        "rule_id": "GR-004",
+        "severity": Severity.WARNING.value,
+        "category": Category.GRAPH.value,
+        "description": "Hub skill with unusually high in-degree — single point of failure.",
+    },
+    {
+        "rule_id": "GR-005",
+        "severity": Severity.WARNING.value,
+        "category": Category.GRAPH.value,
+        "description": "Referenced skill has no Usage or Overview documentation section.",
+    },
+    {
+        "rule_id": "GR-006",
+        "severity": Severity.WARNING.value,
+        "category": Category.GRAPH.value,
+        "description": "Broken intra-skill file reference — Markdown link points to a non-existent .md file.",
+    },
+]
+
+
 def analyze_graph(
     skill_files: list[tuple[Path, str, dict[str, Any]]],
 ) -> list[LintFinding]:

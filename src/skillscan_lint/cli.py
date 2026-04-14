@@ -180,21 +180,33 @@ def rules_cmd(output_format: str) -> None:
     """List all available lint rules."""
     import json as _json
 
+    from skillscan_lint.detectors.graph import GRAPH_RULES
     from skillscan_lint.rules.base import get_all_rules
 
-    rules = sorted(get_all_rules(), key=lambda r: r.rule_id)
+    # Build a unified list of rule dicts from the QL registry + GR graph rules
+    ql_rules = get_all_rules()
+    all_entries: list[dict[str, str]] = [
+        {
+            "id": r.rule_id,
+            "severity": r.severity.value,
+            "category": r.category.value,
+            "description": r.description,
+        }
+        for r in ql_rules
+    ]
+    all_entries.extend(
+        {
+            "id": gr["rule_id"],
+            "severity": gr["severity"],
+            "category": gr["category"],
+            "description": gr["description"],
+        }
+        for gr in GRAPH_RULES
+    )
+    all_entries.sort(key=lambda e: e["id"])
 
     if output_format == "json":
-        data = [
-            {
-                "id": r.rule_id,
-                "severity": r.severity.value,
-                "category": r.category.value,
-                "description": r.description,
-            }
-            for r in rules
-        ]
-        click.echo(_json.dumps(data, indent=2))
+        click.echo(_json.dumps(all_entries, indent=2))
         return
 
     try:
@@ -210,16 +222,18 @@ def rules_cmd(output_format: str) -> None:
         table.add_column("Description")
 
         SEV_COLORS = {"error": "red", "warning": "yellow", "info": "cyan"}
-        for r in rules:
-            color = SEV_COLORS.get(r.severity.value, "white")
+        for entry in all_entries:
+            color = SEV_COLORS.get(entry["severity"], "white")
             table.add_row(
-                r.rule_id,
-                f"[{color}]{r.severity.value}[/{color}]",
-                r.category.value,
-                r.description,
+                entry["id"],
+                f"[{color}]{entry['severity']}[/{color}]",
+                entry["category"],
+                entry["description"],
             )
         console.print(table)
     except ImportError:
         # Fallback plain text
-        for r in rules:
-            click.echo(f"{r.rule_id}\t{r.severity.value}\t{r.category.value}\t{r.description}")
+        for entry in all_entries:
+            click.echo(
+                f"{entry['id']}\t{entry['severity']}\t{entry['category']}\t{entry['description']}"
+            )
