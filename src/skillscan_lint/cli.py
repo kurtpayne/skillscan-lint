@@ -62,6 +62,13 @@ def main() -> None:
     default=None,
     help="Path to a .skillscan-lint.toml config file.",
 )
+@click.option(
+    "--badge-out",
+    "badge_out",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Write a shields.io-compatible lint badge JSON file after scanning.",
+)
 def scan_cmd(
     path: Path,
     output_format: str | None,
@@ -70,6 +77,7 @@ def scan_cmd(
     skip_ids: tuple[str, ...],
     fail_on: str | None,
     config_path: Path | None,
+    badge_out: Path | None,
 ) -> None:
     """Scan a skill file or directory for quality issues."""
     # Load config (explicit path > auto-discovery > defaults)
@@ -119,6 +127,28 @@ def scan_cmd(
         click.echo(format_sarif(summary))
     else:
         print_rich(summary, fail_on=effective_fail_on)
+
+    # --- Badge output ---
+    if badge_out is not None:
+        import json as _json
+
+        errors = summary.total_errors
+        warnings = summary.total_warnings
+        total_issues = errors + warnings
+        if errors > 0:
+            badge_color = "red"
+        elif warnings > 0:
+            badge_color = "yellow"
+        else:
+            badge_color = "brightgreen"
+        badge = {
+            "schemaVersion": 1,
+            "label": "SkillScan Lint",
+            "message": f"{total_issues} issue{'s' if total_issues != 1 else ''}",
+            "color": badge_color,
+        }
+        badge_out.write_text(_json.dumps(badge, indent=2))
+        click.echo(f"Lint badge written to {badge_out}")
 
     # Exit code logic
     if effective_fail_on == "never":
