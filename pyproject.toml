@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "skillscan-lint"
-version = "0.3.1"
+version = "1.0.0"
 description = "Quality linter for AI agent skill files — readability, clarity, and graph integrity checks"
 readme = "README.md"
 license = { text = "Apache-2.0" }
